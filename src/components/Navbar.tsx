@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
@@ -8,7 +7,7 @@ import {
   X, 
   MessageSquareCode, 
   Newspaper, 
-  PuzzlePiece, 
+  Puzzle,
   Code, 
   User,
   LogIn,
@@ -26,7 +25,7 @@ import {
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // State to track login status
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -48,7 +47,6 @@ export function Navbar() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Temporary function for demo purposes - will be replaced with actual auth
   const handleLoginToggle = () => {
     setIsLoggedIn(!isLoggedIn);
   };
@@ -70,7 +68,6 @@ export function Navbar() {
           <span>Bolt</span>
         </Link>
 
-        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-1">
           <Link 
             to="/"
@@ -105,7 +102,7 @@ export function Navbar() {
               location.pathname === "/challenges" ? "bg-primary/10 text-primary" : "hover:bg-secondary"
             }`}
           >
-            <PuzzlePiece className="w-4 h-4" />
+            <Puzzle className="w-4 h-4" />
             <span>Challenges</span>
           </Link>
           <Link 
@@ -172,7 +169,6 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Mobile Navigation Toggle */}
         <div className="flex items-center space-x-4 md:hidden">
           <ThemeToggle />
           <Button 
@@ -191,7 +187,6 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 top-16 z-40 bg-background animate-fade-in">
           <div className="flex flex-col space-y-4 pt-8 px-6">
@@ -226,7 +221,7 @@ export function Navbar() {
               className="flex items-center space-x-2 px-4 py-3 rounded-md transition-colors hover:bg-secondary"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <PuzzlePiece className="w-5 h-5" />
+              <Puzzle className="w-5 h-5" />
               <span>Challenges</span>
             </Link>
             <Link 
