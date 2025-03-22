@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { SendIcon, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { generateAIResponse } from '@/services/aiChatService';
+import { toast } from "sonner";
 
 export function ChatBot() {
   const [query, setQuery] = useState('');
@@ -23,7 +25,7 @@ export function ChatBot() {
     "How does machine learning work?"
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
@@ -32,57 +34,49 @@ export function ChatBot() {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponses = {
-        "What is blockchain technology?": "Blockchain is a distributed, decentralized ledger technology that records transactions across multiple computers. It ensures security, transparency, and immutability without requiring a central authority. Each block contains a timestamp and link to the previous block, forming a chain. It's the foundation for cryptocurrencies like Bitcoin, but has applications in supply chain, healthcare, voting systems, and more.",
-        "Explain quantum computing": "Quantum computing leverages quantum mechanics principles to process information. Unlike classical computers that use bits (0 or 1), quantum computers use quantum bits or 'qubits' that can exist in multiple states simultaneously through superposition. This enables quantum computers to solve certain complex problems exponentially faster than classical computers, particularly in cryptography, materials science, and optimization problems.",
-        "What's new in JavaScript ES2023?": "JavaScript ES2023 introduces several new features including: Array findLast() and findLastIndex() methods, new Hashbang syntax, improvements to Array.prototype.toSorted(), toReversed(), toSpliced(), and with() methods that create new arrays instead of modifying existing ones. It also includes standardized support for the #! syntax in JavaScript source files and additional RegExp features.",
-        "How does machine learning work?": "Machine learning is a subset of AI where algorithms learn patterns from data without explicit programming. It works by: 1) Collecting and preparing data, 2) Choosing a model (like neural networks or decision trees), 3) Training the model on sample data, 4) Evaluating performance, and 5) Optimizing and deploying. The model improves with more data and can make predictions or decisions on new inputs. Common types include supervised, unsupervised, and reinforcement learning."
-      };
-
-      // Default response for queries not in our sample set
-      let responseContent = "I can help you with that! For a more detailed answer, please try our full AI chat feature where I can provide comprehensive information about any technology topic.";
-      
-      // Check if the query matches any of our prepared responses
-      for (const sampleQuery of Object.keys(botResponses)) {
-        if (query.toLowerCase().includes(sampleQuery.toLowerCase())) {
-          responseContent = botResponses[sampleQuery as keyof typeof botResponses];
-          break;
-        }
-      }
-
-      const botMessage = { type: 'bot' as const, content: responseContent };
+    try {
+      // Get response from Gemini
+      const response = await generateAIResponse(query);
+      const botMessage = { type: 'bot' as const, content: response };
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error generating response:", error);
+      toast.error("Failed to get a response. Please try again.");
+      // Add a fallback error message
+      const errorMessage = { 
+        type: 'bot' as const, 
+        content: "I'm having trouble processing your request right now. Please try again later." 
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
       setQuery('');
-    }, 1000);
+    }
   };
 
-  const handleSampleQuery = (sampleQuery: string) => {
+  const handleSampleQuery = async (sampleQuery: string) => {
     setQuery(sampleQuery);
     const userMessage = { type: 'user' as const, content: sampleQuery };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponses: Record<string, string> = {
-        "What is blockchain technology?": "Blockchain is a distributed, decentralized ledger technology that records transactions across multiple computers. It ensures security, transparency, and immutability without requiring a central authority. Each block contains a timestamp and link to the previous block, forming a chain. It's the foundation for cryptocurrencies like Bitcoin, but has applications in supply chain, healthcare, voting systems, and more.",
-        "Explain quantum computing": "Quantum computing leverages quantum mechanics principles to process information. Unlike classical computers that use bits (0 or 1), quantum computers use quantum bits or 'qubits' that can exist in multiple states simultaneously through superposition. This enables quantum computers to solve certain complex problems exponentially faster than classical computers, particularly in cryptography, materials science, and optimization problems.",
-        "What's new in JavaScript ES2023?": "JavaScript ES2023 introduces several new features including: Array findLast() and findLastIndex() methods, new Hashbang syntax, improvements to Array.prototype.toSorted(), toReversed(), toSpliced(), and with() methods that create new arrays instead of modifying existing ones. It also includes standardized support for the #! syntax in JavaScript source files and additional RegExp features.",
-        "How does machine learning work?": "Machine learning is a subset of AI where algorithms learn patterns from data without explicit programming. It works by: 1) Collecting and preparing data, 2) Choosing a model (like neural networks or decision trees), 3) Training the model on sample data, 4) Evaluating performance, and 5) Optimizing and deploying. The model improves with more data and can make predictions or decisions on new inputs. Common types include supervised, unsupervised, and reinforcement learning."
-      };
-
-      const botMessage = { 
-        type: 'bot' as const, 
-        content: botResponses[sampleQuery] || "I can help you with that! For a more detailed answer, please try our full AI chat feature."
-      };
-      
+    try {
+      // Get response from Gemini
+      const response = await generateAIResponse(sampleQuery);
+      const botMessage = { type: 'bot' as const, content: response };
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error generating response:", error);
+      // Add a fallback error message
+      const errorMessage = { 
+        type: 'bot' as const, 
+        content: "I'm having trouble processing your request right now. Please try again later." 
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
       setQuery('');
-    }, 1000);
+    }
   };
 
   return (
