@@ -4,10 +4,24 @@ import { MainLayout } from '@/layouts/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Copy, CheckCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/components/ui/use-toast';
+import { Terminal, Bug, GitCompare, Zap, Copy, CheckCircle, Loader2 } from 'lucide-react';
+import { generateAIResponse } from '@/services/aiChatService';
 
 const CodeGuidePage = () => {
+  const { toast } = useToast();
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [inputCode, setInputCode] = useState('');
+  const [inputPrompt, setInputPrompt] = useState('');
+  const [inputLanguage, setInputLanguage] = useState('');
+  const [targetLanguage, setTargetLanguage] = useState('');
+  const [result, setResult] = useState('');
+  const [currentTab, setCurrentTab] = useState('generator');
 
   const handleCopyCode = (code: string, snippetId: string) => {
     navigator.clipboard.writeText(code);
@@ -15,367 +29,405 @@ const CodeGuidePage = () => {
     setTimeout(() => setCopiedSnippet(null), 2000);
   };
 
-  const CodeSnippet = ({ 
-    id, 
-    code, 
-    language 
-  }: { 
-    id: string; 
-    code: string; 
-    language: string;
-  }) => (
-    <div className="relative">
-      <pre className="p-4 rounded-md bg-secondary/30 overflow-x-auto">
-        <code className={`language-${language}`}>{code}</code>
-      </pre>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="absolute top-2 right-2 h-8 w-8 opacity-70 hover:opacity-100 bg-background/50"
-        onClick={() => handleCopyCode(code, id)}
-      >
-        {copiedSnippet === id ? (
-          <CheckCircle className="h-4 w-4 text-green-500" />
-        ) : (
-          <Copy className="h-4 w-4" />
-        )}
-      </Button>
-    </div>
-  );
+  const handleSubmit = async () => {
+    if (!inputPrompt && currentTab === 'generator') {
+      toast({
+        title: "Error",
+        description: "Please enter a prompt",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!inputCode && (currentTab === 'debugger' || currentTab === 'enhancer')) {
+      toast({
+        title: "Error",
+        description: "Please enter code to process",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((!inputCode || !inputLanguage || !targetLanguage) && currentTab === 'converter') {
+      toast({
+        title: "Error",
+        description: "Please fill all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let prompt = '';
+      
+      switch (currentTab) {
+        case 'generator':
+          prompt = `Generate code for the following request: ${inputPrompt}. Please provide only the code and brief explanations.`;
+          break;
+        case 'debugger':
+          prompt = `Debug the following code and explain any issues found:\n\n${inputCode}`;
+          break;
+        case 'converter':
+          prompt = `Convert the following code from ${inputLanguage} to ${targetLanguage}:\n\n${inputCode}`;
+          break;
+        case 'enhancer':
+          prompt = `Enhance the following code to improve its time and space complexity, and provide feedback on code style:\n\n${inputCode}`;
+          break;
+      }
+
+      const response = await generateAIResponse(prompt);
+      setResult(response);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process your request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setInputCode('');
+    setInputPrompt('');
+    setInputLanguage('');
+    setTargetLanguage('');
+    setResult('');
+  };
 
   return (
     <MainLayout>
       <div className="page-container py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Code Guide</h1>
+          <h1 className="text-3xl font-bold mb-2">Code Tools</h1>
           <p className="text-muted-foreground mb-8">
-            Learn best practices and explore code snippets for various technologies
+            Powerful tools to help you generate, debug, convert, and enhance your code
           </p>
 
-          <Tabs defaultValue="javascript" className="w-full">
+          <Tabs defaultValue="generator" className="w-full" onValueChange={(value) => {
+            setCurrentTab(value);
+            resetForm();
+          }}>
             <TabsList className="grid grid-cols-4 mb-8">
-              <TabsTrigger value="javascript">JavaScript</TabsTrigger>
-              <TabsTrigger value="react">React</TabsTrigger>
-              <TabsTrigger value="python">Python</TabsTrigger>
-              <TabsTrigger value="node">Node.js</TabsTrigger>
+              <TabsTrigger value="generator">
+                <Terminal className="mr-2 h-4 w-4" />
+                Code Generator
+              </TabsTrigger>
+              <TabsTrigger value="debugger">
+                <Bug className="mr-2 h-4 w-4" />
+                Code Debugger
+              </TabsTrigger>
+              <TabsTrigger value="converter">
+                <GitCompare className="mr-2 h-4 w-4" />
+                Code Converter
+              </TabsTrigger>
+              <TabsTrigger value="enhancer">
+                <Zap className="mr-2 h-4 w-4" />
+                Code Enhancer
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="javascript" className="space-y-8">
+            <TabsContent value="generator" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Modern JavaScript Features</CardTitle>
+                  <CardTitle>Generate Code</CardTitle>
                   <CardDescription>
-                    Essential ES6+ features every JavaScript developer should know
+                    Describe what you need, and we'll generate the code for you
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Arrow Functions</h3>
-                    <p className="text-muted-foreground mb-3">
-                      Arrow functions provide a concise syntax and lexically bind the this value.
-                    </p>
-                    <CodeSnippet 
-                      id="js-arrow" 
-                      language="javascript"
-                      code={`// Traditional function
-function add(a, b) {
-  return a + b;
-}
-
-// Arrow function
-const add = (a, b) => a + b;
-
-// With implicit return
-const numbers = [1, 2, 3, 4];
-const doubled = numbers.map(num => num * 2);`} 
-                    />
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Destructuring</h3>
-                    <p className="text-muted-foreground mb-3">
-                      Destructuring makes it easy to extract values from arrays or properties from objects.
-                    </p>
-                    <CodeSnippet 
-                      id="js-destructuring" 
-                      language="javascript"
-                      code={`// Object destructuring
-const person = {
-  name: 'John',
-  age: 30,
-  city: 'New York'
-};
-
-const { name, age } = person;
-console.log(name, age); // John 30
-
-// Array destructuring
-const colors = ['red', 'green', 'blue'];
-const [primaryColor, secondaryColor] = colors;
-console.log(primaryColor, secondaryColor); // red green`} 
-                    />
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Spread Operator</h3>
-                    <p className="text-muted-foreground mb-3">
-                      The spread operator expands an iterable into individual elements.
-                    </p>
-                    <CodeSnippet 
-                      id="js-spread" 
-                      language="javascript"
-                      code={`// Combining arrays
-const arr1 = [1, 2, 3];
-const arr2 = [4, 5, 6];
-const combined = [...arr1, ...arr2];
-console.log(combined); // [1, 2, 3, 4, 5, 6]
-
-// Copying objects with additional properties
-const user = { id: 1, name: 'John' };
-const userWithRole = { ...user, role: 'Admin' };
-console.log(userWithRole); // { id: 1, name: 'John', role: 'Admin' }`} 
-                    />
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="prompt">What would you like to generate?</Label>
+                      <Textarea 
+                        id="prompt"
+                        placeholder="E.g., Create a React component that displays a user profile with avatar, name, and bio"
+                        className="min-h-[120px]"
+                        value={inputPrompt}
+                        onChange={(e) => setInputPrompt(e.target.value)}
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSubmit} 
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Terminal className="mr-2 h-4 w-4" />
+                          Generate Code
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
+
+              {result && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Generated Code</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative">
+                      <pre className="p-4 rounded-md bg-secondary/30 overflow-x-auto whitespace-pre-wrap">
+                        <code>{result}</code>
+                      </pre>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 h-8 w-8 opacity-70 hover:opacity-100 bg-background/50"
+                        onClick={() => handleCopyCode(result, 'generated-code')}
+                      >
+                        {copiedSnippet === 'generated-code' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
-            <TabsContent value="react" className="space-y-8">
+            <TabsContent value="debugger" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>React Hooks</CardTitle>
+                  <CardTitle>Debug Code</CardTitle>
                   <CardDescription>
-                    Essential hooks for functional React components
+                    Paste your code and we'll help you find and fix issues
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">useState Hook</h3>
-                    <p className="text-muted-foreground mb-3">
-                      useState allows functional components to use state.
-                    </p>
-                    <CodeSnippet 
-                      id="react-usestate" 
-                      language="javascript"
-                      code={`import React, { useState } from 'react';
-
-function Counter() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <div>
-      <p>You clicked {count} times</p>
-      <button onClick={() => setCount(count + 1)}>
-        Click me
-      </button>
-    </div>
-  );
-}`} 
-                    />
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">useEffect Hook</h3>
-                    <p className="text-muted-foreground mb-3">
-                      useEffect lets you perform side effects in functional components.
-                    </p>
-                    <CodeSnippet 
-                      id="react-useeffect" 
-                      language="javascript"
-                      code={`import React, { useState, useEffect } from 'react';
-
-function DataFetcher() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await fetch('https://api.example.com/data');
-        const result = await response.json();
-        setData(result);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-
-    // Cleanup function
-    return () => {
-      // Cancel requests or clean up resources
-    };
-  }, []); // Empty dependency array means this runs once on mount
-
-  if (loading) return <div>Loading...</div>;
-  return <div>{JSON.stringify(data)}</div>;
-}`} 
-                    />
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="code-to-debug">Your Code</Label>
+                      <Textarea 
+                        id="code-to-debug"
+                        placeholder="Paste your code here"
+                        className="min-h-[200px] font-mono text-sm"
+                        value={inputCode}
+                        onChange={(e) => setInputCode(e.target.value)}
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSubmit} 
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Debugging...
+                        </>
+                      ) : (
+                        <>
+                          <Bug className="mr-2 h-4 w-4" />
+                          Debug Code
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
+
+              {result && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Debug Results</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative">
+                      <pre className="p-4 rounded-md bg-secondary/30 overflow-x-auto whitespace-pre-wrap">
+                        <code>{result}</code>
+                      </pre>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 h-8 w-8 opacity-70 hover:opacity-100 bg-background/50"
+                        onClick={() => handleCopyCode(result, 'debug-result')}
+                      >
+                        {copiedSnippet === 'debug-result' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
-            <TabsContent value="python" className="space-y-8">
+            <TabsContent value="converter" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Python Best Practices</CardTitle>
+                  <CardTitle>Convert Code</CardTitle>
                   <CardDescription>
-                    Clean Python code patterns and techniques
+                    Convert your code from one programming language to another
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">List Comprehensions</h3>
-                    <p className="text-muted-foreground mb-3">
-                      List comprehensions offer a concise way to create lists.
-                    </p>
-                    <CodeSnippet 
-                      id="python-list-comp" 
-                      language="python"
-                      code={`# Traditional approach
-squares = []
-for i in range(10):
-    squares.append(i * i)
-
-# Using list comprehension
-squares = [i * i for i in range(10)]
-
-# With conditional
-even_squares = [i * i for i in range(10) if i % 2 == 0]
-
-print(squares)     # [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
-print(even_squares) # [0, 4, 16, 36, 64]`} 
-                    />
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Context Managers</h3>
-                    <p className="text-muted-foreground mb-3">
-                      The 'with' statement simplifies resource management.
-                    </p>
-                    <CodeSnippet 
-                      id="python-context" 
-                      language="python"
-                      code={`# File handling with context manager
-with open('file.txt', 'r') as file:
-    content = file.read()
-    # File is automatically closed after the block
-
-# Custom context manager
-from contextlib import contextmanager
-
-@contextmanager
-def managed_resource():
-    print("Acquiring resource...")
-    resource = {"data": "important data"}
-    try:
-        yield resource
-    finally:
-        print("Releasing resource...")
-
-with managed_resource() as resource:
-    print(f"Using resource: {resource['data']}")`} 
-                    />
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="source-language">Source Language</Label>
+                        <Input 
+                          id="source-language"
+                          placeholder="E.g., Python"
+                          value={inputLanguage}
+                          onChange={(e) => setInputLanguage(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="target-language">Target Language</Label>
+                        <Input 
+                          id="target-language"
+                          placeholder="E.g., JavaScript"
+                          value={targetLanguage}
+                          onChange={(e) => setTargetLanguage(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="code-to-convert">Your Code</Label>
+                      <Textarea 
+                        id="code-to-convert"
+                        placeholder="Paste your code here"
+                        className="min-h-[200px] font-mono text-sm"
+                        value={inputCode}
+                        onChange={(e) => setInputCode(e.target.value)}
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSubmit} 
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Converting...
+                        </>
+                      ) : (
+                        <>
+                          <GitCompare className="mr-2 h-4 w-4" />
+                          Convert Code
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
+
+              {result && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Converted Code ({targetLanguage})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative">
+                      <pre className="p-4 rounded-md bg-secondary/30 overflow-x-auto whitespace-pre-wrap">
+                        <code>{result}</code>
+                      </pre>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 h-8 w-8 opacity-70 hover:opacity-100 bg-background/50"
+                        onClick={() => handleCopyCode(result, 'converted-code')}
+                      >
+                        {copiedSnippet === 'converted-code' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
-            <TabsContent value="node" className="space-y-8">
+            <TabsContent value="enhancer" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Node.js Patterns</CardTitle>
+                  <CardTitle>Enhance Code</CardTitle>
                   <CardDescription>
-                    Common patterns for building Node.js applications
+                    Improve your code's performance, readability, and style
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Async/Await with Express</h3>
-                    <p className="text-muted-foreground mb-3">
-                      Using async/await with Express.js for cleaner route handlers.
-                    </p>
-                    <CodeSnippet 
-                      id="node-async" 
-                      language="javascript"
-                      code={`const express = require('express');
-const app = express();
-
-// Middleware for catching async errors
-const asyncHandler = (fn) => (req, res, next) => {
-  return Promise.resolve(fn(req, res, next)).catch(next);
-};
-
-// Route handler with async/await
-app.get('/users/:id', asyncHandler(async (req, res) => {
-  const userId = req.params.id;
-  const user = await db.users.findById(userId);
-  
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
-  }
-  
-  res.json(user);
-}));
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong' });
-});
-
-app.listen(3000, () => {
-  console.log('Server running on port 3000');
-});`} 
-                    />
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">Environment Configuration</h3>
-                    <p className="text-muted-foreground mb-3">
-                      Best practices for managing environment variables.
-                    </p>
-                    <CodeSnippet 
-                      id="node-env" 
-                      language="javascript"
-                      code={`// config.js
-require('dotenv').config();
-
-const config = {
-  environment: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3000', 10),
-  db: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    name: process.env.DB_NAME || 'myapp',
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD
-  },
-  jwtSecret: process.env.JWT_SECRET,
-  // Validate required environment variables
-  validate() {
-    const required = ['DB_USER', 'DB_PASSWORD', 'JWT_SECRET'];
-    const missing = required.filter(key => !process.env[key]);
-    
-    if (missing.length > 0) {
-      throw new Error(
-        \`Missing required environment variables: \${missing.join(', ')}\`
-      );
-    }
-    
-    return this;
-  }
-};
-
-// Export validated config
-module.exports = config.validate();`} 
-                    />
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="code-to-enhance">Your Code</Label>
+                      <Textarea 
+                        id="code-to-enhance"
+                        placeholder="Paste your code here"
+                        className="min-h-[200px] font-mono text-sm"
+                        value={inputCode}
+                        onChange={(e) => setInputCode(e.target.value)}
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={handleSubmit} 
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Enhancing...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="mr-2 h-4 w-4" />
+                          Enhance Code
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
+
+              {result && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Enhanced Code</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative">
+                      <pre className="p-4 rounded-md bg-secondary/30 overflow-x-auto whitespace-pre-wrap">
+                        <code>{result}</code>
+                      </pre>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 h-8 w-8 opacity-70 hover:opacity-100 bg-background/50"
+                        onClick={() => handleCopyCode(result, 'enhanced-code')}
+                      >
+                        {copiedSnippet === 'enhanced-code' ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>

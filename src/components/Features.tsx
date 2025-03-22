@@ -1,5 +1,5 @@
 
-import { MessageSquare, Newspaper, Trophy, Code } from "lucide-react";
+import { MessageSquare, Newspaper, Trophy, Code, Terminal, Bug, GitCompare, Zap } from "lucide-react";
 
 export function Features() {
   const features = [
@@ -20,8 +20,8 @@ export function Features() {
     },
     {
       icon: <Code className="h-10 w-10 text-primary" />,
-      title: "Code Guide",
-      description: "Get feedback and suggestions to improve your code with our intelligent code analyzer."
+      title: "Code Tools",
+      description: "Powerful tools to generate, debug, convert, and enhance your code efficiently."
     }
   ];
 
