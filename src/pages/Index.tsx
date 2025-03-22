@@ -8,10 +8,12 @@ import { ChatBot } from "@/components/ChatBot";
 const Index = () => {
   return (
     <MainLayout>
-      <Hero />
-      <Features />
-      <ChatBot />
-      <NewsSection />
+      <div className="page-container">
+        <Hero />
+        <Features />
+        <ChatBot />
+        <NewsSection />
+      </div>
     </MainLayout>
   );
 };
