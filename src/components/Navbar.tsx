@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,7 +12,8 @@ import {
   Code, 
   User,
   LogIn,
-  LogOut 
+  LogOut,
+  CreditCard
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,12 +23,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const isLoggedIn = !!user;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -48,8 +55,25 @@ export function Navbar() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  const handleLoginToggle = () => {
-    setIsLoggedIn(!isLoggedIn);
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error signing out",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAuthClick = () => {
+    navigate(isLoggedIn ? '/profile' : '/login');
+    if (isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
   };
 
   return (
@@ -130,25 +154,22 @@ export function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuLabel>{profile?.username || user?.email}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer w-full">
+                      <User className="mr-2 h-4 w-4" />
                       Profile
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/progress" className="cursor-pointer w-full">
-                      Progress Tracker
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/credits" className="cursor-pointer w-full">
-                      Credits: 120
+                    <Link to="/profile" className="cursor-pointer w-full">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Credits: {profile?.credits || 0}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLoginToggle} className="text-destructive flex items-center cursor-pointer">
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive flex items-center cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -158,13 +179,13 @@ export function Navbar() {
           ) : (
             <>
               <Button asChild variant="outline" className="transition-transform hover:scale-105">
-                <Link to="/login" onClick={handleLoginToggle}>
+                <Link to="/login">
                   <LogIn className="mr-2 h-4 w-4" />
                   Log In
                 </Link>
               </Button>
               <Button asChild className="transition-transform hover:scale-105">
-                <Link to="/signup" onClick={handleLoginToggle}>Sign Up</Link>
+                <Link to="/signup">Sign Up</Link>
               </Button>
             </>
           )}
@@ -245,25 +266,15 @@ export function Navbar() {
                     <User className="w-5 h-5" />
                     <span>Profile</span>
                   </Link>
-                  <Link 
-                    to="/progress"
-                    className="px-4 py-3 rounded-md transition-colors hover:bg-secondary"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Progress Tracker
-                  </Link>
-                  <Link 
-                    to="/credits"
-                    className="px-4 py-3 rounded-md transition-colors hover:bg-secondary"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Credits: 120
-                  </Link>
+                  <div className="flex items-center px-4 py-3 rounded-md">
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    <span>Credits: {profile?.credits || 0}</span>
+                  </div>
                   <Button 
                     variant="destructive" 
                     className="w-full"
                     onClick={() => {
-                      handleLoginToggle();
+                      handleSignOut();
                       setIsMobileMenuOpen(false);
                     }}
                   >
@@ -275,7 +286,6 @@ export function Navbar() {
                 <>
                   <Button asChild variant="outline" className="w-full">
                     <Link to="/login" onClick={() => {
-                      handleLoginToggle();
                       setIsMobileMenuOpen(false);
                     }}>
                       <LogIn className="mr-2 h-4 w-4" />
@@ -284,7 +294,6 @@ export function Navbar() {
                   </Button>
                   <Button asChild className="w-full">
                     <Link to="/signup" onClick={() => {
-                      handleLoginToggle();
                       setIsMobileMenuOpen(false);
                     }}>
                       Sign Up

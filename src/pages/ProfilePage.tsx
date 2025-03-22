@@ -1,227 +1,223 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Trophy, Star, Clock, Zap, CheckCircle2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/context/AuthContext';
+import { CreditCard, Award, CheckCircle2, Clock, User, Mail, Calendar } from 'lucide-react';
+
+interface CompletedTask {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  points: number;
+}
+
+const mockCompletedTasks: CompletedTask[] = [
+  {
+    id: "1",
+    title: "Build a Responsive Nav Menu",
+    type: "Challenge",
+    date: "2023-10-15",
+    points: 100
+  },
+  {
+    id: "2",
+    title: "Optimize Database Queries",
+    type: "Challenge",
+    date: "2023-10-20",
+    points: 250
+  },
+  {
+    id: "3",
+    title: "AI Chat Completion",
+    type: "Interaction",
+    date: "2023-10-25",
+    points: 50
+  }
+];
 
 const ProfilePage = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [userData, setUserData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    credits: 120,
-    level: 3,
-    progress: 65,
-    totalChallenges: 18,
-    completedChallenges: 12,
-    pendingChallenges: 3,
-    skills: [
-      { name: "JavaScript", level: 85 },
-      { name: "React", level: 70 },
-      { name: "Python", level: 60 },
-      { name: "Node.js", level: 75 }
-    ],
-    recentActivity: [
-      { type: "challenge", name: "React State Management", date: "2023-07-15", status: "completed", points: 15 },
-      { type: "chat", name: "API Authentication Question", date: "2023-07-13", status: "completed", points: 0 },
-      { type: "code", name: "Debug React Component", date: "2023-07-10", status: "completed", points: 10 },
-      { type: "challenge", name: "Full-Stack App Creation", date: "2023-07-05", status: "in-progress", points: 0 }
-    ]
+  const { user, profile, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>(mockCompletedTasks);
+  
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/login');
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
+          <p>Loading profile...</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!user || !profile) {
+    return (
+      <MainLayout>
+        <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Authentication Required</CardTitle>
+              <CardDescription>Please sign in to view your profile</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button onClick={() => navigate('/login')} className="w-full">
+                Go to Login
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  const joinedDate = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
 
-  useEffect(() => {
-    // Simulate loading user data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  const ActivityItem = ({ activity }: { activity: any }) => (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex items-center gap-3">
-        {activity.type === 'challenge' && <Trophy className="h-5 w-5 text-yellow-500" />}
-        {activity.type === 'chat' && <Zap className="h-5 w-5 text-blue-500" />}
-        {activity.type === 'code' && <Star className="h-5 w-5 text-purple-500" />}
-        <div>
-          <p className="font-medium">{activity.name}</p>
-          <p className="text-sm text-muted-foreground">{new Date(activity.date).toLocaleDateString()}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {activity.status === 'completed' && (
-          <span className="flex items-center text-sm text-green-500">
-            <CheckCircle2 className="h-4 w-4 mr-1" /> 
-            {activity.points > 0 ? `+${activity.points} pts` : 'Completed'}
-          </span>
-        )}
-        {activity.status === 'in-progress' && (
-          <span className="flex items-center text-sm text-amber-500">
-            <Clock className="h-4 w-4 mr-1" /> In Progress
-          </span>
-        )}
-      </div>
-    </div>
-  );
+  const totalPoints = completedTasks.reduce((sum, task) => sum + task.points, 0);
 
   return (
     <MainLayout>
       <div className="page-container py-8">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Your Profile</h1>
-          <p className="text-muted-foreground mb-8">
-            Track your progress, credits, and completed tasks
-          </p>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {/* User Profile Card */}
-            <Card className="md:col-span-1">
-              <CardHeader className="pb-4">
-                <div className="flex flex-col items-center text-center">
-                  <Avatar className="h-24 w-24 mb-4">
-                    <AvatarImage src="https://github.com/shadcn.png" alt={userData.name} />
-                    <AvatarFallback>{userData.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <CardTitle>{userData.name}</CardTitle>
-                  <CardDescription>{userData.email}</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Level {userData.level}</span>
-                      <span className="text-sm text-muted-foreground">{userData.progress}%</span>
-                    </div>
-                    <Progress value={userData.progress} className="h-2" />
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-primary/10">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-medium">Your Credits</p>
-                        <p className="text-2xl font-bold">{userData.credits}</p>
-                      </div>
-                      <Button variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10">
-                        Add More
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <h3 className="text-sm font-medium">Skills</h3>
-                    <div className="space-y-3">
-                      {userData.skills.map((skill, index) => (
-                        <div key={index} className="space-y-1">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">{skill.name}</span>
-                            <span className="text-sm text-muted-foreground">{skill.level}%</span>
-                          </div>
-                          <Progress value={skill.level} className="h-1.5" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Progress Dashboard */}
-            <Card className="md:col-span-2">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Profile Card */}
+            <Card className="md:max-w-sm w-full">
               <CardHeader>
-                <CardTitle>Your Progress Dashboard</CardTitle>
-                <CardDescription>
-                  Track your achievements and ongoing activities
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <CardTitle className="text-2xl">My Profile</CardTitle>
+                    <CardDescription>Manage your account</CardDescription>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-6 w-6" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Username</span>
+                  </div>
+                  <p className="font-medium">{profile.username || 'Not set'}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Email</span>
+                  </div>
+                  <p className="font-medium">{user.email}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Joined</span>
+                  </div>
+                  <p className="font-medium">{joinedDate}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Credits</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-2xl font-bold">{profile.credits}</p>
+                    {profile.is_premium && (
+                      <span className="bg-amber-100 text-amber-800 dark:bg-amber-800/20 dark:text-amber-400 text-xs px-2 py-1 rounded-full">
+                        Premium
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <Alert>
+                  <Award className="h-4 w-4" />
+                  <AlertTitle>Achievement Progress</AlertTitle>
+                  <AlertDescription>
+                    You've earned {totalPoints} points from completed tasks and challenges!
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="w-full">
+                  Edit Profile
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            {/* Activity Tabs */}
+            <Card className="flex-1">
+              <CardHeader>
+                <CardTitle>Activity & Progress</CardTitle>
+                <CardDescription>Track your ByteBolt journey</CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="overview" className="w-full">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-                    <TabsTrigger value="challenges">Challenges</TabsTrigger>
+                <Tabs defaultValue="completed">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="completed">Completed Tasks</TabsTrigger>
+                    <TabsTrigger value="history">Activity History</TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="overview">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className="p-4 rounded-lg bg-secondary/40 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Total Challenges</p>
-                        <p className="text-2xl font-bold">{userData.totalChallenges}</p>
+                  <TabsContent value="completed" className="space-y-4">
+                    {completedTasks.length > 0 ? (
+                      completedTasks.map((task) => (
+                        <div 
+                          key={task.id} 
+                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+                            <div>
+                              <p className="font-medium">{task.title}</p>
+                              <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded mr-2">
+                                  {task.type}
+                                </span>
+                                <Clock className="h-3 w-3 mr-1" />
+                                <span>{new Date(task.date).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <Award className="h-4 w-4 text-amber-500 mr-1" />
+                            <span className="font-medium">{task.points} points</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">No completed tasks yet. Start a challenge!</p>
+                        <Button className="mt-4" onClick={() => navigate('/challenges')}>
+                          View Challenges
+                        </Button>
                       </div>
-                      <div className="p-4 rounded-lg bg-secondary/40 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Completed</p>
-                        <p className="text-2xl font-bold">{userData.completedChallenges}</p>
-                      </div>
-                      <div className="p-4 rounded-lg bg-secondary/40 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">In Progress</p>
-                        <p className="text-2xl font-bold">{userData.pendingChallenges}</p>
-                      </div>
-                    </div>
-                    
-                    <h3 className="text-lg font-medium mb-3">Recent Activity</h3>
-                    <div className="space-y-1">
-                      {userData.recentActivity.slice(0, 3).map((activity, index) => (
-                        <ActivityItem key={index} activity={activity} />
-                      ))}
-                    </div>
+                    )}
                   </TabsContent>
                   
-                  <TabsContent value="activity">
-                    <h3 className="text-lg font-medium mb-3">All Activity</h3>
-                    <div className="space-y-1">
-                      {userData.recentActivity.map((activity, index) => (
-                        <div key={index}>
-                          <ActivityItem activity={activity} />
-                          {index < userData.recentActivity.length - 1 && <Separator />}
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="challenges">
-                    <h3 className="text-lg font-medium mb-3">Your Challenges</h3>
-                    <div className="space-y-3">
-                      <div className="p-4 rounded-lg bg-secondary/20 border border-border">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-medium">React State Management</h4>
-                          <span className="text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded">Completed</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">Build a complex state management system using React Context or Redux</p>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Trophy className="h-4 w-4 mr-1 text-yellow-500" />
-                          <span>15 points earned</span>
-                        </div>
-                      </div>
-                      
-                      <div className="p-4 rounded-lg bg-secondary/20 border border-border">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-medium">Full-Stack App Creation</h4>
-                          <span className="text-xs bg-amber-500/20 text-amber-500 px-2 py-1 rounded">In Progress</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">Create a full-stack application with React, Node.js, and a database of your choice</p>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Progress value={30} className="h-1.5 w-24 mr-2" />
-                          <span>30% completed</span>
-                        </div>
-                      </div>
-                      
-                      <div className="p-4 rounded-lg bg-secondary/20 border border-border">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-medium">Debug React Component</h4>
-                          <span className="text-xs bg-green-500/20 text-green-500 px-2 py-1 rounded">Completed</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">Fix bugs in a complex React component with performance issues</p>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Trophy className="h-4 w-4 mr-1 text-yellow-500" />
-                          <span>10 points earned</span>
-                        </div>
-                      </div>
+                  <TabsContent value="history">
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground">Activity tracking coming soon!</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        We're working on a comprehensive activity history feature.
+                      </p>
                     </div>
                   </TabsContent>
                 </Tabs>

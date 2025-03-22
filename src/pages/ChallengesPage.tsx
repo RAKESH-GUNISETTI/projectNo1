@@ -1,11 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Brain, Code, Database, ShieldCheck, Server, Award, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Challenge {
   id: string;
@@ -20,7 +22,9 @@ interface Challenge {
 
 const ChallengesPage = () => {
   const navigate = useNavigate();
-  const [isLoggedIn] = useState(false); // This would come from your auth context in a real app
+  const { user, isLoading } = useAuth();
+  const { toast } = useToast();
+  const isLoggedIn = !!user;
 
   const challenges: Challenge[] = [
     {
@@ -117,6 +121,11 @@ const ChallengesPage = () => {
 
   const handleChallengeClick = (challenge: Challenge) => {
     if (challenge.isLocked) {
+      toast({
+        title: "Login Required",
+        description: "Please login to access this challenge.",
+        variant: "default",
+      });
       navigate('/login');
     } else {
       navigate(`/challenges/${challenge.id}`);
