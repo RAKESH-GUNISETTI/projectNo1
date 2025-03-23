@@ -7,7 +7,7 @@ import { ChatBot } from "@/components/ChatBot";
 import { useEffect } from "react";
 
 const Index = () => {
-  // Add smooth scrolling behavior
+  // Add smooth scrolling behavior and animations
   useEffect(() => {
     // Add smooth scrolling to all internal links
     const internalLinks = document.querySelectorAll('a[href^="#"]');
@@ -20,20 +20,22 @@ const Index = () => {
           const targetElement = document.getElementById(targetId);
           if (targetElement) {
             targetElement.scrollIntoView({
-              behavior: 'smooth'
+              behavior: 'smooth',
+              block: 'start'
             });
           }
         }
       });
     });
 
-    // Animate elements on scroll
+    // Enhanced animate elements on scroll with offset options
     const handleScroll = () => {
       const elements = document.querySelectorAll('.scroll-animate');
       
       elements.forEach(element => {
         const rect = element.getBoundingClientRect();
-        const isVisible = rect.top < window.innerHeight - 100;
+        // Adjust when animation triggers (element is 15% visible)
+        const isVisible = rect.top < window.innerHeight * 0.85;
         
         if (isVisible) {
           element.classList.add('animate-fade-in');
@@ -42,13 +44,24 @@ const Index = () => {
     };
 
     // Initial check for elements in view
-    handleScroll();
+    setTimeout(handleScroll, 100);
     
-    // Listen for scroll events
-    window.addEventListener('scroll', handleScroll);
+    // Listen for scroll events with throttling for performance
+    let scrollTimeout: NodeJS.Timeout;
+    const throttledScroll = () => {
+      if (!scrollTimeout) {
+        scrollTimeout = setTimeout(() => {
+          handleScroll();
+          scrollTimeout = undefined as unknown as NodeJS.Timeout;
+        }, 100); // 100ms throttle
+      }
+    };
+    
+    window.addEventListener('scroll', throttledScroll);
     
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', throttledScroll);
+      clearTimeout(scrollTimeout);
     };
   }, []);
 

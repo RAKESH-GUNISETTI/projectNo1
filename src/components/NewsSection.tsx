@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { NewsItem, fetchLatestNews } from '@/services/newsService';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ExternalLink } from 'lucide-react';
 
 export function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -27,9 +27,9 @@ export function NewsSection() {
   }, []);
 
   return (
-    <section className="section-spacing">
+    <section id="news" className="section-spacing">
       <div className="page-container">
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-16 scroll-animate">
           <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Latest News
           </div>
@@ -62,8 +62,12 @@ export function NewsSection() {
           </div>
         ) : (
           <div className="grid md:grid-cols-3 gap-8">
-            {news.map((item) => (
-              <Card key={item.id} className="overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-4px]">
+            {news.map((item, index) => (
+              <Card 
+                key={item.id} 
+                className="overflow-hidden shadow-sm transition-all duration-300 hover:shadow-lg hover:translate-y-[-4px] scroll-animate"
+                style={{ animationDelay: `${index * 150}ms` }}
+              >
                 <div className="w-full aspect-video overflow-hidden">
                   <img 
                     src={item.imageUrl} 
@@ -72,7 +76,7 @@ export function NewsSection() {
                   />
                 </div>
                 <CardHeader>
-                  <CardTitle className="line-clamp-2">{item.title}</CardTitle>
+                  <CardTitle className="line-clamp-2 hover:text-primary transition-colors">{item.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm line-clamp-3">{item.summary}</p>
@@ -81,8 +85,11 @@ export function NewsSection() {
                   <div className="text-xs text-muted-foreground">
                     {item.source} • {new Date(item.date).toLocaleDateString()}
                   </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to={item.url} className="text-primary">Read more</Link>
+                  <Button variant="ghost" size="sm" asChild className="group">
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1">
+                      Read more
+                      <ExternalLink className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
+                    </a>
                   </Button>
                 </CardFooter>
               </Card>
@@ -90,7 +97,7 @@ export function NewsSection() {
           </div>
         )}
 
-        <div className="mt-12 text-center">
+        <div className="mt-12 text-center scroll-animate">
           <Button asChild variant="outline" className="group">
             <Link to="/news">
               View all news

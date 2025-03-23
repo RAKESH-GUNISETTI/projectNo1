@@ -1,5 +1,5 @@
 
-import { MessageSquare, Newspaper, Trophy, Code, Terminal, Bug, GitCompare, Zap } from "lucide-react";
+import { MessageSquare, Newspaper, Trophy, Code } from "lucide-react";
 
 export function Features() {
   const features = [
@@ -26,9 +26,9 @@ export function Features() {
   ];
 
   return (
-    <section className="section-spacing bg-secondary/50">
+    <section id="features" className="section-spacing bg-secondary/50">
       <div className="page-container">
-        <div className="text-center max-w-2xl mx-auto mb-16">
+        <div className="text-center max-w-2xl mx-auto mb-16 scroll-animate">
           <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Features
           </div>
@@ -42,10 +42,11 @@ export function Features() {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="glass-card p-6 rounded-xl transition-all duration-300 hover:translate-y-[-8px] hover:shadow-emphasis"
+              className="glass-card p-6 rounded-xl transition-all duration-300 hover:translate-y-[-8px] hover:shadow-emphasis scroll-animate"
+              style={{ animationDelay: `${index * 150}ms` }}
             >
               <div className="flex flex-col items-center text-center">
-                <div className="p-3 rounded-full bg-primary/10 mb-4">
+                <div className="p-3 rounded-full bg-primary/10 mb-4 transition-all duration-300 hover:scale-110 hover:bg-primary/20">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
