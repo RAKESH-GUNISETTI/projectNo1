@@ -29,6 +29,7 @@ import { useToast } from "@/components/ui/use-toast";
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeLink, setActiveLink] = useState("/");
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
@@ -50,6 +51,10 @@ export function Navbar() {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  useEffect(() => {
+    setActiveLink(location.pathname);
+  }, [location.pathname]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -78,34 +83,34 @@ export function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
         isScrolled
-          ? "py-3 blur-backdrop shadow-sm"
+          ? "py-3 blur-backdrop shadow-md dark:shadow-primary/5"
           : "py-5 bg-transparent"
       }`}
     >
       <nav className="page-container flex items-center justify-between">
         <Link 
           to="/"
-          className="text-2xl font-semibold flex items-center space-x-2 transition-transform hover:scale-105"
+          className="text-2xl font-semibold flex items-center space-x-2 transition-all duration-300 hover:scale-105"
         >
-          <span className="bg-primary text-primary-foreground px-2 py-1 rounded">Byte</span>
-          <span>Bolt</span>
+          <span className="bg-primary text-primary-foreground px-2 py-1 rounded shadow-md hover:shadow-primary/30 transition-all duration-300">Byte</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/70 transition-all duration-300">Bolt</span>
         </Link>
 
         <div className="hidden md:flex items-center space-x-1">
           <Link 
             to="/"
-            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-colors ${
-              location.pathname === "/" ? "bg-primary/10 text-primary" : "hover:bg-secondary"
+            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-all duration-300 hover:scale-105 ${
+              activeLink === "/" ? "bg-primary/10 text-primary shadow-sm" : "hover:bg-secondary hover:shadow-sm"
             }`}
           >
             <span>Home</span>
           </Link>
           <Link 
             to="/chat"
-            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-colors ${
-              location.pathname === "/chat" ? "bg-primary/10 text-primary" : "hover:bg-secondary"
+            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-all duration-300 hover:scale-105 ${
+              activeLink === "/chat" ? "bg-primary/10 text-primary shadow-sm" : "hover:bg-secondary hover:shadow-sm"
             }`}
           >
             <MessageSquareCode className="w-4 h-4" />
@@ -114,8 +119,8 @@ export function Navbar() {
           </Link>
           <Link 
             to="/news"
-            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-colors ${
-              location.pathname === "/news" ? "bg-primary/10 text-primary" : "hover:bg-secondary"
+            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-all duration-300 hover:scale-105 ${
+              activeLink === "/news" ? "bg-primary/10 text-primary shadow-sm" : "hover:bg-secondary hover:shadow-sm"
             }`}
           >
             <Newspaper className="w-4 h-4" />
@@ -123,8 +128,8 @@ export function Navbar() {
           </Link>
           <Link 
             to="/challenges"
-            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-colors ${
-              location.pathname === "/challenges" ? "bg-primary/10 text-primary" : "hover:bg-secondary"
+            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-all duration-300 hover:scale-105 ${
+              activeLink === "/challenges" ? "bg-primary/10 text-primary shadow-sm" : "hover:bg-secondary hover:shadow-sm"
             }`}
           >
             <Puzzle className="w-4 h-4" />
@@ -132,8 +137,8 @@ export function Navbar() {
           </Link>
           <Link 
             to="/code-guide"
-            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-colors ${
-              location.pathname === "/code-guide" ? "bg-primary/10 text-primary" : "hover:bg-secondary"
+            className={`flex items-center space-x-1 px-4 py-2 rounded-md transition-all duration-300 hover:scale-105 ${
+              activeLink === "/code-guide" ? "bg-primary/10 text-primary shadow-sm" : "hover:bg-secondary hover:shadow-sm"
             }`}
           >
             <Code className="w-4 h-4" />
@@ -178,13 +183,13 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Button asChild variant="outline" className="transition-transform hover:scale-105">
+              <Button asChild variant="outline" className="transition-all duration-300 hover:scale-105 hover:shadow-md">
                 <Link to="/login">
                   <LogIn className="mr-2 h-4 w-4" />
                   Log In
                 </Link>
               </Button>
-              <Button asChild className="transition-transform hover:scale-105">
+              <Button asChild className="transition-all duration-300 hover:scale-105 hover:shadow-md hover:shadow-primary/30">
                 <Link to="/signup">Sign Up</Link>
               </Button>
             </>
@@ -197,7 +202,7 @@ export function Navbar() {
             variant="ghost" 
             size="icon" 
             onClick={toggleMobileMenu}
-            className="w-9 h-9 rounded-full transition-transform hover:scale-110"
+            className="w-9 h-9 rounded-full transition-all duration-300 hover:scale-110 hover:shadow-md hover:bg-primary/10"
           >
             {isMobileMenuOpen ? (
               <X className="h-5 w-5" />
@@ -210,7 +215,7 @@ export function Navbar() {
       </nav>
 
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-16 z-40 bg-background animate-fade-in">
+        <div className="md:hidden fixed inset-0 top-16 z-40 bg-background/95 backdrop-blur-lg animate-fade-in shadow-xl">
           <div className="flex flex-col space-y-4 pt-8 px-6">
             <Link 
               to="/"

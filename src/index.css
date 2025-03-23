@@ -123,11 +123,12 @@
     @apply scroll-smooth;
   }
 
+  /* Slowed down animations */
   .scroll-animate {
     opacity: 0;
     transform: translateY(20px);
-    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), 
-                transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1), 
+                transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .scroll-animate.animate-fade-in {
@@ -162,12 +163,12 @@
   
   /* Floating animation for background elements */
   .animate-float {
-    animation: float 6s ease-in-out infinite;
+    animation: float 8s ease-in-out infinite; /* Slowed down from 6s to 8s */
   }
   
   /* Slow pulse animation */
   .animate-pulse-slow {
-    animation: pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: pulse 7s cubic-bezier(0.4, 0, 0.6, 1) infinite; /* Slowed down from 5s to 7s */
   }
   
   /* Shine effect for cards and buttons */
@@ -197,7 +198,7 @@
   .shine-effect:hover::after {
     opacity: 1;
     transform: rotate(30deg) translate(150%, -150%);
-    transition: transform 0.7s, opacity 0.2s;
+    transition: transform 1.2s, opacity 0.2s; /* Slowed down from 0.7s to 1.2s */
   }
 }
 
@@ -306,7 +307,7 @@
 .page-enter-active {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+  transition: opacity 500ms ease-in-out, transform 500ms ease-in-out; /* Slowed down from 300ms to 500ms */
 }
 
 .page-exit {
@@ -317,5 +318,11 @@
 .page-exit-active {
   opacity: 0;
   transform: translateY(-8px);
-  transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+  transition: opacity 500ms ease-in-out, transform 500ms ease-in-out; /* Slowed down from 300ms to 500ms */
+}
+
+/* Mouse tracer effect */
+.cursor-tracer {
+  @apply fixed w-8 h-8 rounded-full bg-primary/20 blur-md transition-all duration-700 opacity-70 pointer-events-none z-50;
+  transform: translate(-50%, -50%);
 }

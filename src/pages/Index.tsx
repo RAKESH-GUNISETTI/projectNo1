@@ -2,12 +2,36 @@
 import { MainLayout } from "@/layouts/MainLayout";
 import { Hero } from "@/components/Hero";
 import { Features } from "@/components/Features";
+import { VideoDemo } from "@/components/VideoDemo";
 import { NewsSection } from "@/components/NewsSection";
 import { ChatBot } from "@/components/ChatBot";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const Index = () => {
   const pageRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  
+  // Handle cursor tracer effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+      
+      if (cursorRef.current) {
+        // Add slight delay for trailing effect
+        setTimeout(() => {
+          cursorRef.current!.style.left = `${e.clientX}px`;
+          cursorRef.current!.style.top = `${e.clientY}px`;
+        }, 50);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
   
   // Add enhanced scroll animation system with configurable animations
   useEffect(() => {
@@ -47,21 +71,29 @@ const Index = () => {
       
       elements.forEach(element => {
         const rect = element.getBoundingClientRect();
-        // Adjust when animation triggers (element is 15% visible)
-        const isVisible = rect.top < window.innerHeight * 0.85;
+        // Adjust when animation triggers (element is 25% visible) - slowed down by triggering earlier
+        const isVisible = rect.top < window.innerHeight * 0.75;
         
         if (isVisible) {
           // Check for custom animation type
           const animationType = element.getAttribute('data-animation') || 'fade-in';
           const animationClass = animationEffects[animationType] || 'animate-fade-in';
+          const delay = element.getAttribute('data-delay') || '0';
           
-          element.classList.add(animationClass);
+          // Set a delay if specified
+          if (delay !== '0') {
+            setTimeout(() => {
+              element.classList.add(animationClass);
+            }, parseInt(delay));
+          } else {
+            element.classList.add(animationClass);
+          }
         }
       });
     };
 
     // Initial check for elements in view
-    setTimeout(handleScroll, 100);
+    setTimeout(handleScroll, 300); // Increased initial delay for slower animations
     
     // Listen for scroll events with throttling for performance
     let scrollTimeout: NodeJS.Timeout;
@@ -70,7 +102,7 @@ const Index = () => {
         scrollTimeout = setTimeout(() => {
           handleScroll();
           scrollTimeout = undefined as unknown as NodeJS.Timeout;
-        }, 100); // 100ms throttle
+        }, 150); // Increased throttle time for slower animations
       }
     };
     
@@ -100,6 +132,17 @@ const Index = () => {
   return (
     <MainLayout>
       <div className="page-container" ref={pageRef}>
+        {/* Cursor tracer effect */}
+        <div 
+          ref={cursorRef}
+          className="fixed w-8 h-8 pointer-events-none z-50 rounded-full bg-primary/20 blur-md transition-all duration-300 opacity-70 hidden md:block"
+          style={{
+            left: mousePosition.x,
+            top: mousePosition.y,
+            transform: 'translate(-50%, -50%)'
+          }}
+        />
+        
         {/* Animated background elements */}
         <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
           <div className="absolute -top-20 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl parallax" data-speed="0.2"></div>
@@ -108,6 +151,7 @@ const Index = () => {
         </div>
         
         <Hero />
+        <VideoDemo />
         <Features />
         <ChatBot />
         <NewsSection />
