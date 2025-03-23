@@ -69,7 +69,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // Fix: Use the correct table name instead of 'profiles'
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -77,6 +76,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (error) {
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
+
+      if (data) {
+        setProfile(data as Profile);
+      } else {
+        console.log('No profile found for user ID:', userId);
+        // If no profile exists, create one
+        await createProfile(userId);
+      }
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+    }
+  };
+
+  const createProfile = async (userId: string) => {
+    try {
+      const username = user?.email?.split('@')[0] || 'user';
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([
+          { 
+            id: userId,
+            username,
+            credits: 0,
+            is_premium: false
+          }
+        ])
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Error creating profile:', error);
         throw error;
       }
 
@@ -84,7 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setProfile(data as Profile);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error in createProfile:', error);
     }
   };
 
@@ -125,6 +159,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, username?: string) => {
     try {
       setIsLoading(true);
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error("Please enter a valid email address");
+      }
+      
+      // Validate password strength
+      if (password.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
