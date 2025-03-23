@@ -26,9 +26,15 @@ export function Features() {
   ];
 
   return (
-    <section id="features" className="section-spacing bg-secondary/50">
-      <div className="page-container">
-        <div className="text-center max-w-2xl mx-auto mb-16 scroll-animate">
+    <section id="features" className="section-spacing bg-secondary/50 relative overflow-hidden">
+      {/* Animated background dots */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/5 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-20 right-20 w-60 h-60 bg-purple-500/5 rounded-full blur-3xl animate-float"></div>
+      </div>
+      
+      <div className="page-container relative z-10">
+        <div className="text-center max-w-2xl mx-auto mb-16 scroll-animate" data-animation="slide-up">
           <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Features
           </div>
@@ -42,11 +48,12 @@ export function Features() {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="glass-card p-6 rounded-xl transition-all duration-300 hover:translate-y-[-8px] hover:shadow-emphasis scroll-animate"
+              className="glass-card p-6 rounded-xl transition-all duration-500 hover:translate-y-[-8px] hover:shadow-xl hover:shadow-primary/10 scroll-animate"
               style={{ animationDelay: `${index * 150}ms` }}
+              data-animation="zoom-in"
             >
               <div className="flex flex-col items-center text-center">
-                <div className="p-3 rounded-full bg-primary/10 mb-4 transition-all duration-300 hover:scale-110 hover:bg-primary/20">
+                <div className="p-3 rounded-full bg-primary/10 mb-4 transition-all duration-300 hover:scale-110 hover:bg-primary/20 hover:rotate-6">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>

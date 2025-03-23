@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -125,17 +126,78 @@
   .scroll-animate {
     opacity: 0;
     transform: translateY(20px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), 
+                transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .scroll-animate.animate-fade-in {
     opacity: 1;
     transform: translateY(0);
   }
+  
+  .scroll-animate.animate-slide-up {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .scroll-animate.animate-slide-down {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .scroll-animate.animate-slide-in-right {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  
+  .scroll-animate.animate-scale-in {
+    opacity: 1;
+    transform: scale(1);
+  }
 
   .typing-container {
     @apply inline-block overflow-hidden whitespace-nowrap border-r-2 border-foreground;
     animation: typing 3.5s steps(40, end), blink .75s step-end infinite;
+  }
+  
+  /* Floating animation for background elements */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  /* Slow pulse animation */
+  .animate-pulse-slow {
+    animation: pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  /* Shine effect for cards and buttons */
+  .shine-effect {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .shine-effect::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(30deg);
+    transition: transform 0.7s;
+    opacity: 0;
+  }
+  
+  .shine-effect:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(150%, -150%);
+    transition: transform 0.7s, opacity 0.2s;
   }
 }
 
@@ -190,6 +252,29 @@
   .hover-elevate {
     @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
   }
+  
+  /* New animation utilities */
+  .hover-rotate {
+    @apply transition-transform duration-300 hover:rotate-3;
+  }
+  
+  .hover-glow {
+    @apply transition-all duration-300;
+    &:hover {
+      box-shadow: 0 0 15px theme('colors.primary.DEFAULT');
+    }
+  }
+  
+  .animate-on-hover {
+    @apply relative overflow-hidden;
+    &::after {
+      content: '';
+      @apply absolute inset-0 bg-primary/10 opacity-0 transition-opacity duration-300;
+    }
+    &:hover::after {
+      @apply opacity-100;
+    }
+  }
 }
 
 @keyframes typing {
@@ -200,6 +285,16 @@
 @keyframes blink {
   from, to { border-color: transparent }
   50% { border-color: currentColor }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.3; }
 }
 
 /* Page Transitions */
