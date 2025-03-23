@@ -4,10 +4,11 @@ import { MainLayout } from '@/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Brain, Code, Database, ShieldCheck, Server, Award, Lock } from 'lucide-react';
+import { Brain, Code, Database, ShieldCheck, Server, Award, Lock, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Challenge {
   id: string;
@@ -18,15 +19,33 @@ interface Challenge {
   xp: number;
   isLocked: boolean;
   icon: React.ReactNode;
+  status?: 'not_started' | 'in_progress' | 'completed';
+  timeSpent?: number;
+}
+
+interface ChallengeProgress {
+  challenge_id: string;
+  user_id: string;
+  status: 'not_started' | 'in_progress' | 'completed';
+  time_spent: number;
+  started_at: string;
+  completed_at: string | null;
 }
 
 const ChallengesPage = () => {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const isLoggedIn = !!user;
+  
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [userChallengeProgress, setUserChallengeProgress] = useState<Record<string, ChallengeProgress>>({});
+  const [activeChallenge, setActiveChallenge] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [claimingReward, setClaimingReward] = useState<string | null>(null);
 
-  const challenges: Challenge[] = [
+  // Initial challenge data
+  const initialChallenges: Challenge[] = [
     {
       id: "c1",
       title: "Build a Responsive Nav Menu",
@@ -89,6 +108,227 @@ const ChallengesPage = () => {
     }
   ];
 
+  useEffect(() => {
+    // Update isLocked status based on authentication
+    setChallenges(initialChallenges.map(challenge => ({
+      ...challenge,
+      isLocked: challenge.id === "c1" ? false : !isLoggedIn,
+    })));
+    
+    // Fetch user challenge progress if logged in
+    if (user) {
+      fetchUserChallengeProgress();
+    }
+  }, [isLoggedIn, user]);
+
+  const fetchUserChallengeProgress = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('challenge_progress')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Convert to record for easier lookup
+      const progressRecord: Record<string, ChallengeProgress> = {};
+      if (data) {
+        data.forEach((progress: ChallengeProgress) => {
+          progressRecord[progress.challenge_id] = progress;
+        });
+      }
+      
+      setUserChallengeProgress(progressRecord);
+      
+      // Update challenges with progress data
+      setChallenges(prevChallenges => 
+        prevChallenges.map(challenge => ({
+          ...challenge,
+          status: progressRecord[challenge.id]?.status || 'not_started',
+          timeSpent: progressRecord[challenge.id]?.time_spent || 0,
+        }))
+      );
+      
+      // Check for active challenge
+      const inProgressChallenge = data?.find(
+        (progress: ChallengeProgress) => progress.status === 'in_progress'
+      );
+      if (inProgressChallenge) {
+        setActiveChallenge(inProgressChallenge.challenge_id);
+      }
+    } catch (error) {
+      console.error('Error fetching challenge progress:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your challenge progress.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startChallenge = async (challengeId: string) => {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to start this challenge.",
+        variant: "default",
+      });
+      navigate('/login');
+      return;
+    }
+    
+    if (activeChallenge && activeChallenge !== challengeId) {
+      toast({
+        title: "Active Challenge",
+        description: "You already have an active challenge. Complete or quit it before starting a new one.",
+        variant: "default",
+      });
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Check if there's existing progress
+      const progress = userChallengeProgress[challengeId];
+      
+      if (progress && progress.status === 'completed') {
+        toast({
+          title: "Challenge Completed",
+          description: "You've already completed this challenge!",
+          variant: "default",
+        });
+        return;
+      }
+      
+      // If no existing progress or not completed, create/update
+      const now = new Date().toISOString();
+      
+      if (!progress) {
+        // Create new progress record
+        const { error } = await supabase
+          .from('challenge_progress')
+          .insert([{
+            challenge_id: challengeId,
+            user_id: user.id,
+            status: 'in_progress',
+            time_spent: 0,
+            started_at: now,
+            completed_at: null
+          }]);
+          
+        if (error) throw error;
+      } else {
+        // Update existing record to in_progress
+        const { error } = await supabase
+          .from('challenge_progress')
+          .update({
+            status: 'in_progress',
+            started_at: now
+          })
+          .eq('challenge_id', challengeId)
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+      }
+      
+      // Update local state
+      setActiveChallenge(challengeId);
+      
+      // Update challenge status
+      setChallenges(prevChallenges => 
+        prevChallenges.map(challenge => 
+          challenge.id === challengeId 
+            ? { ...challenge, status: 'in_progress' } 
+            : challenge
+        )
+      );
+      
+      // Navigate to the challenge page
+      navigate(`/challenges/${challengeId}`);
+      
+      toast({
+        title: "Challenge Started",
+        description: "Good luck with your challenge!",
+      });
+    } catch (error) {
+      console.error('Error starting challenge:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start the challenge. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const completeChallenge = async (challengeId: string) => {
+    if (!user) return;
+    
+    try {
+      setClaimingReward(challengeId);
+      
+      // Get the challenge
+      const challenge = challenges.find(c => c.id === challengeId);
+      if (!challenge) return;
+      
+      // Update challenge progress to completed
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('challenge_progress')
+        .update({
+          status: 'completed',
+          completed_at: now
+        })
+        .eq('challenge_id', challengeId)
+        .eq('user_id', user.id);
+        
+      if (error) throw error;
+      
+      // Add XP to user's profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          credits: (profile?.credits || 0) + challenge.xp
+        })
+        .eq('id', user.id);
+        
+      if (profileError) throw profileError;
+      
+      // Update local state
+      setActiveChallenge(null);
+      setChallenges(prevChallenges => 
+        prevChallenges.map(challenge => 
+          challenge.id === challengeId 
+            ? { ...challenge, status: 'completed' } 
+            : challenge
+        )
+      );
+      
+      toast({
+        title: "Challenge Completed!",
+        description: `Congratulations! You've earned ${challenge.xp} XP.`,
+      });
+    } catch (error) {
+      console.error('Error completing challenge:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete the challenge. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setClaimingReward(null);
+    }
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Beginner':
@@ -119,6 +359,17 @@ const ChallengesPage = () => {
     }
   };
 
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case 'in_progress':
+        return <Badge className="bg-orange-500/10 text-orange-500">In Progress</Badge>;
+      case 'completed':
+        return <Badge className="bg-green-500/10 text-green-500">Completed</Badge>;
+      default:
+        return null;
+    }
+  };
+
   const handleChallengeClick = (challenge: Challenge) => {
     if (challenge.isLocked) {
       toast({
@@ -127,10 +378,22 @@ const ChallengesPage = () => {
         variant: "default",
       });
       navigate('/login');
-    } else {
+    } else if (challenge.status === 'completed') {
       navigate(`/challenges/${challenge.id}`);
+    } else {
+      startChallenge(challenge.id);
     }
   };
+
+  if (authLoading) {
+    return (
+      <MainLayout>
+        <div className="page-container py-8 flex justify-center items-center min-h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -158,6 +421,7 @@ const ChallengesPage = () => {
                       <CardTitle className="text-xl">{challenge.title}</CardTitle>
                     </div>
                     {challenge.isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
+                    {challenge.status === 'completed' && <CheckCircle className="h-5 w-5 text-green-500" />}
                   </div>
                   <div className="flex gap-2 mt-2">
                     <Badge className={`${getDifficultyColor(challenge.difficulty)}`}>
@@ -166,6 +430,7 @@ const ChallengesPage = () => {
                     <Badge className={`${getCategoryColor(challenge.category)}`}>
                       {challenge.category}
                     </Badge>
+                    {getStatusBadge(challenge.status)}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -177,13 +442,40 @@ const ChallengesPage = () => {
                   <div className="flex items-center gap-1">
                     <Award className="h-4 w-4 text-amber-500" />
                     <span className="text-sm font-medium">{challenge.xp} XP</span>
+                    {challenge.timeSpent && challenge.timeSpent > 0 && (
+                      <div className="flex items-center gap-1 ml-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {Math.floor(challenge.timeSpent / 60)}m {challenge.timeSpent % 60}s
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <Button
-                    onClick={() => handleChallengeClick(challenge)}
-                    variant={challenge.isLocked ? "outline" : "default"}
-                  >
-                    {challenge.isLocked ? "Login to Unlock" : "Start Challenge"}
-                  </Button>
+                  {challenge.status === 'completed' ? (
+                    <Button
+                      onClick={() => navigate(`/challenges/${challenge.id}`)}
+                      variant="outline"
+                      className="text-green-500 border-green-500/50"
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Completed
+                    </Button>
+                  ) : challenge.status === 'in_progress' ? (
+                    <Button
+                      onClick={() => navigate(`/challenges/${challenge.id}`)}
+                      variant="secondary"
+                      className="text-orange-500"
+                    >
+                      Continue Challenge
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleChallengeClick(challenge)}
+                      variant={challenge.isLocked ? "outline" : "default"}
+                    >
+                      {challenge.isLocked ? "Login to Unlock" : "Start Challenge"}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             ))}

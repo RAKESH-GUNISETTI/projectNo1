@@ -7,10 +7,33 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Terminal, Bug, GitCompare, Zap, Copy, CheckCircle, Loader2 } from 'lucide-react';
 import { generateAIResponse } from '@/services/aiChatService';
+
+const PROGRAMMING_LANGUAGES = [
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "python", label: "Python" },
+  { value: "java", label: "Java" },
+  { value: "csharp", label: "C#" },
+  { value: "cpp", label: "C++" },
+  { value: "go", label: "Go" },
+  { value: "ruby", label: "Ruby" },
+  { value: "php", label: "PHP" },
+  { value: "swift", label: "Swift" },
+  { value: "kotlin", label: "Kotlin" },
+  { value: "rust", label: "Rust" },
+];
 
 const CodeGuidePage = () => {
   const { toast } = useToast();
@@ -20,6 +43,7 @@ const CodeGuidePage = () => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [inputLanguage, setInputLanguage] = useState('');
   const [targetLanguage, setTargetLanguage] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('javascript');
   const [result, setResult] = useState('');
   const [currentTab, setCurrentTab] = useState('generator');
 
@@ -63,16 +87,16 @@ const CodeGuidePage = () => {
       
       switch (currentTab) {
         case 'generator':
-          prompt = `Generate code for the following request: ${inputPrompt}. Please provide only the code and brief explanations.`;
+          prompt = `Generate ${selectedLanguage} code for the following request: ${inputPrompt}. Please provide only the code and brief explanations.`;
           break;
         case 'debugger':
-          prompt = `Debug the following code and explain any issues found:\n\n${inputCode}`;
+          prompt = `Debug the following ${selectedLanguage} code and explain any issues found:\n\n${inputCode}`;
           break;
         case 'converter':
           prompt = `Convert the following code from ${inputLanguage} to ${targetLanguage}:\n\n${inputCode}`;
           break;
         case 'enhancer':
-          prompt = `Enhance the following code to improve its time and space complexity, and provide feedback on code style:\n\n${inputCode}`;
+          prompt = `Enhance the following ${selectedLanguage} code to improve its time and space complexity, and provide feedback on code style:\n\n${inputCode}`;
           break;
       }
 
@@ -140,10 +164,31 @@ const CodeGuidePage = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="space-y-2">
+                      <Label htmlFor="language-select">Programming Language</Label>
+                      <Select 
+                        value={selectedLanguage} 
+                        onValueChange={setSelectedLanguage}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a programming language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Programming Languages</SelectLabel>
+                            {PROGRAMMING_LANGUAGES.map((lang) => (
+                              <SelectItem key={lang.value} value={lang.value}>
+                                {lang.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="prompt">What would you like to generate?</Label>
                       <Textarea 
                         id="prompt"
-                        placeholder="E.g., Create a React component that displays a user profile with avatar, name, and bio"
+                        placeholder="E.g., Create a function that validates email addresses"
                         className="min-h-[120px]"
                         value={inputPrompt}
                         onChange={(e) => setInputPrompt(e.target.value)}
@@ -209,6 +254,27 @@ const CodeGuidePage = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="debug-language-select">Programming Language</Label>
+                      <Select 
+                        value={selectedLanguage} 
+                        onValueChange={setSelectedLanguage}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a programming language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Programming Languages</SelectLabel>
+                            {PROGRAMMING_LANGUAGES.map((lang) => (
+                              <SelectItem key={lang.value} value={lang.value}>
+                                {lang.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="code-to-debug">Your Code</Label>
                       <Textarea 
@@ -282,21 +348,45 @@ const CodeGuidePage = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="source-language">Source Language</Label>
-                        <Input 
-                          id="source-language"
-                          placeholder="E.g., Python"
-                          value={inputLanguage}
-                          onChange={(e) => setInputLanguage(e.target.value)}
-                        />
+                        <Select 
+                          value={inputLanguage} 
+                          onValueChange={setInputLanguage}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select source language" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Programming Languages</SelectLabel>
+                              {PROGRAMMING_LANGUAGES.map((lang) => (
+                                <SelectItem key={lang.value} value={lang.value}>
+                                  {lang.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="target-language">Target Language</Label>
-                        <Input 
-                          id="target-language"
-                          placeholder="E.g., JavaScript"
-                          value={targetLanguage}
-                          onChange={(e) => setTargetLanguage(e.target.value)}
-                        />
+                        <Select 
+                          value={targetLanguage} 
+                          onValueChange={setTargetLanguage}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select target language" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Programming Languages</SelectLabel>
+                              {PROGRAMMING_LANGUAGES.map((lang) => (
+                                <SelectItem key={lang.value} value={lang.value}>
+                                  {lang.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
@@ -370,6 +460,27 @@ const CodeGuidePage = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="enhance-language-select">Programming Language</Label>
+                      <Select 
+                        value={selectedLanguage} 
+                        onValueChange={setSelectedLanguage}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a programming language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectLabel>Programming Languages</SelectLabel>
+                            {PROGRAMMING_LANGUAGES.map((lang) => (
+                              <SelectItem key={lang.value} value={lang.value}>
+                                {lang.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="code-to-enhance">Your Code</Label>
                       <Textarea 
