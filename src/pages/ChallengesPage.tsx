@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/layouts/MainLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,10 +25,11 @@ interface Challenge {
 interface ChallengeProgress {
   challenge_id: string;
   user_id: string;
-  status: 'not_started' | 'in_progress' | 'completed';
+  status: string;
   time_spent: number;
   started_at: string;
   completed_at: string | null;
+  id: string;
 }
 
 const ChallengesPage = () => {
@@ -44,7 +44,6 @@ const ChallengesPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [claimingReward, setClaimingReward] = useState<string | null>(null);
 
-  // Initial challenge data
   const initialChallenges: Challenge[] = [
     {
       id: "c1",
@@ -109,13 +108,11 @@ const ChallengesPage = () => {
   ];
 
   useEffect(() => {
-    // Update isLocked status based on authentication
     setChallenges(initialChallenges.map(challenge => ({
       ...challenge,
       isLocked: challenge.id === "c1" ? false : !isLoggedIn,
     })));
     
-    // Fetch user challenge progress if logged in
     if (user) {
       fetchUserChallengeProgress();
     }
@@ -135,28 +132,25 @@ const ChallengesPage = () => {
         throw error;
       }
       
-      // Convert to record for easier lookup
       const progressRecord: Record<string, ChallengeProgress> = {};
       if (data) {
-        data.forEach((progress: ChallengeProgress) => {
-          progressRecord[progress.challenge_id] = progress;
+        data.forEach((progress) => {
+          progressRecord[progress.challenge_id] = progress as ChallengeProgress;
         });
       }
       
       setUserChallengeProgress(progressRecord);
       
-      // Update challenges with progress data
       setChallenges(prevChallenges => 
         prevChallenges.map(challenge => ({
           ...challenge,
-          status: progressRecord[challenge.id]?.status || 'not_started',
+          status: progressRecord[challenge.id]?.status as 'not_started' | 'in_progress' | 'completed' || 'not_started',
           timeSpent: progressRecord[challenge.id]?.time_spent || 0,
         }))
       );
       
-      // Check for active challenge
       const inProgressChallenge = data?.find(
-        (progress: ChallengeProgress) => progress.status === 'in_progress'
+        (progress) => progress.status === 'in_progress'
       );
       if (inProgressChallenge) {
         setActiveChallenge(inProgressChallenge.challenge_id);
@@ -196,7 +190,6 @@ const ChallengesPage = () => {
     try {
       setIsLoading(true);
       
-      // Check if there's existing progress
       const progress = userChallengeProgress[challengeId];
       
       if (progress && progress.status === 'completed') {
@@ -208,11 +201,9 @@ const ChallengesPage = () => {
         return;
       }
       
-      // If no existing progress or not completed, create/update
       const now = new Date().toISOString();
       
       if (!progress) {
-        // Create new progress record
         const { error } = await supabase
           .from('challenge_progress')
           .insert([{
@@ -226,7 +217,6 @@ const ChallengesPage = () => {
           
         if (error) throw error;
       } else {
-        // Update existing record to in_progress
         const { error } = await supabase
           .from('challenge_progress')
           .update({
@@ -239,10 +229,8 @@ const ChallengesPage = () => {
         if (error) throw error;
       }
       
-      // Update local state
       setActiveChallenge(challengeId);
       
-      // Update challenge status
       setChallenges(prevChallenges => 
         prevChallenges.map(challenge => 
           challenge.id === challengeId 
@@ -251,7 +239,6 @@ const ChallengesPage = () => {
         )
       );
       
-      // Navigate to the challenge page
       navigate(`/challenges/${challengeId}`);
       
       toast({
@@ -276,11 +263,9 @@ const ChallengesPage = () => {
     try {
       setClaimingReward(challengeId);
       
-      // Get the challenge
       const challenge = challenges.find(c => c.id === challengeId);
       if (!challenge) return;
       
-      // Update challenge progress to completed
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('challenge_progress')
@@ -293,7 +278,6 @@ const ChallengesPage = () => {
         
       if (error) throw error;
       
-      // Add XP to user's profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -303,7 +287,6 @@ const ChallengesPage = () => {
         
       if (profileError) throw profileError;
       
-      // Update local state
       setActiveChallenge(null);
       setChallenges(prevChallenges => 
         prevChallenges.map(challenge => 
