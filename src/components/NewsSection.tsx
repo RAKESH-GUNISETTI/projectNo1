@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { fetchLatestNews, NewsItem } from '@/services/newsService';
-import { Clock, ArrowRight, ExternalLink } from 'lucide-react';
+import { Clock, ArrowRight, ExternalLink, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { 
   Dialog, 
@@ -27,14 +27,32 @@ export function NewsSection() {
       try {
         const newsData = await fetchLatestNews();
         setNews(newsData);
+        
+        // Store news in sessionStorage for persistence
+        sessionStorage.setItem('cachedNews', JSON.stringify(newsData));
       } catch (error) {
         console.error('Error fetching news:', error);
+        
+        // Try to load from sessionStorage if fetch fails
+        const cachedNews = sessionStorage.getItem('cachedNews');
+        if (cachedNews) {
+          setNews(JSON.parse(cachedNews));
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    getNews();
+    // Check if we have cached news first
+    const cachedNews = sessionStorage.getItem('cachedNews');
+    if (cachedNews) {
+      setNews(JSON.parse(cachedNews));
+      setLoading(false);
+      // Still fetch fresh news in the background
+      getNews();
+    } else {
+      getNews();
+    }
   }, []);
 
   // Function to get a random color for tags
@@ -219,19 +237,30 @@ export function NewsSection() {
         </div>
       </div>
 
-      {/* Article Detail Dialog */}
+      {/* Enhanced Article Detail Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedArticle && (
             <>
               <DialogHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className={getRandomTagColor()}>
-                    {selectedArticle.source}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {format(new Date(selectedArticle.date), 'MMMM d, yyyy')}
-                  </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge className={getRandomTagColor()}>
+                      {selectedArticle.source}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {format(new Date(selectedArticle.date), 'MMMM d, yyyy')}
+                    </span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="rounded-full p-2 h-8 w-8" 
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Back to news list</span>
+                  </Button>
                 </div>
                 <DialogTitle className="text-2xl mb-3">{selectedArticle.title}</DialogTitle>
                 <DialogDescription>
@@ -250,16 +279,33 @@ export function NewsSection() {
                     <p className="mt-4 text-base leading-relaxed">
                       The article discusses various aspects of {selectedArticle.title.toLowerCase()}, including recent developments in the field, expert opinions, and potential future implications.
                     </p>
+                    <blockquote className="border-l-4 border-primary pl-4 italic my-6">
+                      "An insightful quote about {selectedArticle.title.split(' ').slice(0, 3).join(' ').toLowerCase()} from an industry expert would appear here, adding credibility and perspective to the article."
+                    </blockquote>
+                    <h3 className="text-xl font-semibold mt-6 mb-3">Key Takeaways</h3>
+                    <ul className="list-disc pl-5 space-y-2">
+                      <li>First important point about {selectedArticle.title.split(' ').slice(0, 2).join(' ').toLowerCase()}</li>
+                      <li>Second critical insight related to the topic</li>
+                      <li>Third consideration for readers to understand</li>
+                    </ul>
+                    <h3 className="text-xl font-semibold mt-6 mb-3">Related Topics</h3>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {['Technology', 'Innovation', 'Development', 'Future Trends'].map((tag) => (
+                        <Badge key={tag} variant="outline" className="cursor-pointer hover:bg-primary/10">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between items-center">
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between items-center mt-6 border-t pt-4">
                 <div className="text-sm text-muted-foreground">
                   Article ID: {selectedArticle.id} • Source: {selectedArticle.source}
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Close
+                    Back to News
                   </Button>
                   <Button variant="default" asChild>
                     <Link to={`/news/${selectedArticle.id}`}>

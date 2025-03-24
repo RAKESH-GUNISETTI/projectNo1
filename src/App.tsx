@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { useEffect } from "react";
@@ -15,6 +15,7 @@ import CodeGuidePage from "./pages/CodeGuidePage";
 import ProfilePage from "./pages/ProfilePage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import NewsDetailPage from "./pages/NewsDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,43 @@ const ScrollToTop = () => {
   return null;
 };
 
+// Enhanced page refresh handler that redirects users to home page
+const PageRefreshHandler = () => {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Set a flag when the page loads normally
+    if (!sessionStorage.getItem('page_loaded')) {
+      sessionStorage.setItem('page_loaded', 'true');
+      return;
+    }
+    
+    // Listen for page refreshes
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem('page_loaded');
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // If the page was refreshed (no page_loaded flag), redirect to home
+    if (!sessionStorage.getItem('page_refresh_checked')) {
+      sessionStorage.setItem('page_refresh_checked', 'true');
+      const wasRefreshed = performance.navigation && 
+        performance.navigation.type === 1;
+      
+      if (wasRefreshed && window.location.pathname !== '/') {
+        navigate('/', { replace: true });
+      }
+    }
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [navigate]);
+  
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -41,10 +79,12 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <ScrollToTop />
+            <PageRefreshHandler />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/news" element={<NewsPage />} />
+              <Route path="/news/:id" element={<NewsDetailPage />} />
               <Route path="/challenges" element={<ChallengesPage />} />
               <Route path="/code-guide" element={<CodeGuidePage />} />
               <Route path="/profile" element={<ProfilePage />} />
