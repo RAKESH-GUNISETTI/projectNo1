@@ -78,11 +78,11 @@ export function NewsSection() {
                       </Badge>
                       <span className="text-sm text-muted-foreground flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
-                        {format(new Date(news[0].publishedAt), 'MMM d, yyyy')}
+                        {format(new Date(news[0].date), 'MMM d, yyyy')}
                       </span>
                     </div>
                     <CardTitle className="text-2xl mb-3 transition-colors hover:text-primary">{news[0].title}</CardTitle>
-                    <CardDescription className="text-base">{news[0].description}</CardDescription>
+                    <CardDescription className="text-base">{news[0].summary}</CardDescription>
                   </div>
                   <CardFooter className="px-0 pt-4">
                     <Button variant="outline" className="group" asChild>
@@ -121,13 +121,13 @@ export function NewsSection() {
                   </Badge>
                   <span className="text-xs text-muted-foreground flex items-center">
                     <Clock className="h-3 w-3 mr-1" />
-                    {format(new Date(item.publishedAt), 'MMM d, yyyy')}
+                    {format(new Date(item.date), 'MMM d, yyyy')}
                   </span>
                 </div>
                 <CardTitle className="text-lg transition-colors hover:text-primary">{item.title}</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <CardDescription className="line-clamp-2">{item.description}</CardDescription>
+                <CardDescription className="line-clamp-2">{item.summary}</CardDescription>
               </CardContent>
               <CardFooter className="p-4 pt-0">
                 <Button variant="ghost" size="sm" className="group p-0" asChild>
@@ -164,13 +164,13 @@ export function NewsSection() {
                   </Badge>
                   <span className="text-xs text-muted-foreground flex items-center">
                     <Clock className="h-3 w-3 mr-1" />
-                    {format(new Date(item.publishedAt), 'MMM d, yyyy')}
+                    {format(new Date(item.date), 'MMM d, yyyy')}
                   </span>
                 </div>
                 <CardTitle className="text-base transition-colors hover:text-primary">{item.title}</CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-0">
-                <CardDescription className="text-sm line-clamp-2">{item.description}</CardDescription>
+                <CardDescription className="text-sm line-clamp-2">{item.summary}</CardDescription>
               </CardContent>
               <CardFooter className="p-3 pt-0">
                 <Button variant="ghost" size="sm" className="group p-0 text-sm" asChild>
