@@ -5,12 +5,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { fetchLatestNews, NewsItem } from '@/services/newsService';
-import { Clock, ArrowRight } from 'lucide-react';
+import { Clock, ArrowRight, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 
 export function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const getNews = async () => {
@@ -44,6 +54,12 @@ export function NewsSection() {
 
   // Create an extended news array with additional items
   const extendedNews = [...news, ...news.slice(0, 2)];
+
+  // Handle opening the article dialog
+  const openArticleDialog = (article: NewsItem) => {
+    setSelectedArticle(article);
+    setIsDialogOpen(true);
+  };
 
   return (
     <section id="news" className="section-spacing">
@@ -84,11 +100,15 @@ export function NewsSection() {
                     <CardTitle className="text-2xl mb-3 transition-colors hover:text-primary">{news[0].title}</CardTitle>
                     <CardDescription className="text-base">{news[0].summary}</CardDescription>
                   </div>
-                  <CardFooter className="px-0 pt-4">
-                    <Button variant="outline" className="group" asChild>
+                  <CardFooter className="px-0 pt-4 flex gap-3">
+                    <Button variant="outline" className="group" onClick={() => openArticleDialog(news[0])}>
+                      View Details
+                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                    <Button variant="secondary" className="group" asChild>
                       <Link to={`/news/${news[0].id}`}>
                         Read Full Article
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        <ExternalLink className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   </CardFooter>
@@ -129,11 +149,15 @@ export function NewsSection() {
               <CardContent className="p-4 pt-0">
                 <CardDescription className="line-clamp-2">{item.summary}</CardDescription>
               </CardContent>
-              <CardFooter className="p-4 pt-0">
-                <Button variant="ghost" size="sm" className="group p-0" asChild>
+              <CardFooter className="p-4 pt-0 flex justify-between">
+                <Button variant="ghost" size="sm" className="group p-0" onClick={() => openArticleDialog(item)}>
+                  View Details
+                  <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                </Button>
+                <Button variant="outline" size="sm" className="group" asChild>
                   <Link to={`/news/${item.id}`}>
-                    Read More
-                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    Full Article
+                    <ExternalLink className="ml-1 h-3 w-3" />
                   </Link>
                 </Button>
               </CardFooter>
@@ -172,11 +196,15 @@ export function NewsSection() {
               <CardContent className="p-3 pt-0">
                 <CardDescription className="text-sm line-clamp-2">{item.summary}</CardDescription>
               </CardContent>
-              <CardFooter className="p-3 pt-0">
-                <Button variant="ghost" size="sm" className="group p-0 text-sm" asChild>
+              <CardFooter className="p-3 pt-0 flex justify-between">
+                <Button variant="ghost" size="sm" className="group p-0 text-sm" onClick={() => openArticleDialog(item)}>
+                  View Details
+                  <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                </Button>
+                <Button variant="outline" size="sm" className="group text-xs" asChild>
                   <Link to={`/news/${item.id}`}>
-                    Read More
-                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    Full Article
+                    <ExternalLink className="ml-1 h-3 w-3" />
                   </Link>
                 </Button>
               </CardFooter>
@@ -190,6 +218,61 @@ export function NewsSection() {
           </Button>
         </div>
       </div>
+
+      {/* Article Detail Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          {selectedArticle && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className={getRandomTagColor()}>
+                    {selectedArticle.source}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {format(new Date(selectedArticle.date), 'MMMM d, yyyy')}
+                  </span>
+                </div>
+                <DialogTitle className="text-2xl mb-3">{selectedArticle.title}</DialogTitle>
+                <DialogDescription>
+                  <div className="my-4 relative h-60 sm:h-80 bg-secondary rounded-md overflow-hidden">
+                    <img 
+                      src={selectedArticle.imageUrl} 
+                      alt={selectedArticle.title} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="prose dark:prose-invert prose-sm sm:prose-base max-w-none">
+                    <p className="text-base leading-relaxed">{selectedArticle.summary}</p>
+                    <p className="mt-4 text-base leading-relaxed">
+                      This is an expanded view of the article. In a fully implemented version, this would show the complete article content with formatting, additional images, and related links. For now, we're showing a preview of what the complete article might contain.
+                    </p>
+                    <p className="mt-4 text-base leading-relaxed">
+                      The article discusses various aspects of {selectedArticle.title.toLowerCase()}, including recent developments in the field, expert opinions, and potential future implications.
+                    </p>
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  Article ID: {selectedArticle.id} • Source: {selectedArticle.source}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Close
+                  </Button>
+                  <Button variant="default" asChild>
+                    <Link to={`/news/${selectedArticle.id}`}>
+                      Read Full Article
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
