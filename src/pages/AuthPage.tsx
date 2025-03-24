@@ -12,19 +12,33 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { Eye, EyeOff, LogIn, UserPlus, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, LogIn, UserPlus, Loader2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Enhanced validation schemas
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters long' }),
+  email: z.string()
+    .min(1, { message: 'Email is required' })
+    .email({ message: 'Please enter a valid email address' }),
+  password: z.string()
+    .min(6, { message: 'Password must be at least 6 characters long' }),
 });
 
 const signupSchema = z.object({
-  username: z.string().min(3, { message: 'Username must be at least 3 characters long' }).optional(),
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters long' }),
-  confirmPassword: z.string(),
+  username: z.string()
+    .min(3, { message: 'Username must be at least 3 characters long' })
+    .max(30, { message: 'Username must be less than 30 characters' })
+    .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Username can only contain letters, numbers, underscores and hyphens' })
+    .optional(),
+  email: z.string()
+    .min(1, { message: 'Email is required' })
+    .email({ message: 'Please enter a valid email address' }),
+  password: z.string()
+    .min(6, { message: 'Password must be at least 6 characters long' })
+    .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number' }),
+  confirmPassword: z.string()
+    .min(1, { message: 'Please confirm your password' }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -44,6 +58,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
   
   // Redirect if already logged in
   useEffect(() => {
@@ -70,6 +85,40 @@ const AuthPage = () => {
     },
   });
 
+  // Listen for password changes to calculate strength
+  useEffect(() => {
+    const subscription = signupForm.watch((value, { name }) => {
+      if (name === 'password') {
+        const password = value.password as string || '';
+        let strength = 0;
+        
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        
+        setPasswordStrength(strength);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [signupForm.watch]);
+  
+  // Preserve form data across tab changes
+  useEffect(() => {
+    const storedEmail = sessionStorage.getItem('auth_email');
+    const storedUsername = sessionStorage.getItem('auth_username');
+    
+    if (storedEmail) {
+      loginForm.setValue('email', storedEmail);
+      signupForm.setValue('email', storedEmail);
+    }
+    
+    if (storedUsername) {
+      signupForm.setValue('username', storedUsername);
+    }
+  }, [loginForm, signupForm]);
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -78,11 +127,26 @@ const AuthPage = () => {
     try {
       setFormError('');
       setIsSubmitting(true);
+      
+      // Save form data to session storage
+      sessionStorage.setItem('auth_email', values.email);
+      
       await signIn(values.email, values.password);
+      toast({
+        title: "Login successful",
+        description: "Welcome back to ByteBolt!",
+      });
       navigate('/');
     } catch (error: any) {
       console.error('Login error:', error);
-      setFormError(error.message || 'Failed to sign in. Please check your credentials.');
+      // More user-friendly error messages
+      if (error.message?.includes('Invalid login credentials')) {
+        setFormError('Incorrect email or password. Please try again.');
+      } else if (error.message?.includes('Email not confirmed')) {
+        setFormError('Please verify your email address before logging in.');
+      } else {
+        setFormError(error.message || 'Failed to sign in. Please check your credentials.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -92,25 +156,56 @@ const AuthPage = () => {
     try {
       setFormError('');
       setIsSubmitting(true);
+      
+      // Save form data to session storage
+      sessionStorage.setItem('auth_email', values.email);
+      if (values.username) {
+        sessionStorage.setItem('auth_username', values.username);
+      }
+      
       await signUp(values.email, values.password, values.username);
       toast({
-        title: "Verification email sent",
+        title: "Account created successfully",
         description: "Please check your email to verify your account.",
       });
       // Switch to login tab after successful signup
       setActiveTab('login');
+      loginForm.setValue('email', values.email);
     } catch (error: any) {
       console.error('Signup error:', error);
-      setFormError(error.message || 'Failed to create account. Please try again.');
+      // More specific error messages
+      if (error.message?.includes('User already registered')) {
+        setFormError('An account with this email already exists. Try logging in instead.');
+      } else if (error.message?.includes('Username taken')) {
+        setFormError('This username is already taken. Please choose another one.');
+      } else {
+        setFormError(error.message || 'Failed to create account. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Get password strength indicator color
+  const getPasswordStrengthColor = () => {
+    switch (passwordStrength) {
+      case 0: return "bg-red-500";
+      case 1: return "bg-red-500";
+      case 2: return "bg-yellow-500";
+      case 3: return "bg-green-400";
+      case 4: return "bg-green-500";
+      default: return "bg-red-500";
     }
   };
 
   return (
     <MainLayout>
       <div className="flex justify-center items-center min-h-[calc(100vh-200px)] py-8 px-4">
-        <Card className="w-full max-w-md animate-fade-in">
+        <Card className="w-full max-w-md animate-fade-in relative overflow-hidden">
+          {/* Background effects */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 -left-20 w-40 h-40 bg-purple-500/5 rounded-full blur-3xl"></div>
+          
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'signup')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
@@ -182,7 +277,7 @@ const AuthPage = () => {
                     <Button 
                       type="submit" 
                       className={cn(
-                        "w-full transition-all duration-300 animate-fade-in hover:shadow-md",
+                        "w-full transition-all duration-700 animate-fade-in hover:shadow-lg hover:shadow-primary/20",
                         isSubmitting && "opacity-70"
                       )} 
                       disabled={isLoading || isSubmitting}
@@ -280,6 +375,20 @@ const AuthPage = () => {
                               </span>
                             </Button>
                           </div>
+                          <div className="mt-1">
+                            <div className="h-1 flex rounded-full overflow-hidden space-x-1">
+                              <div className={`h-full ${passwordStrength >= 1 ? getPasswordStrengthColor() : "bg-gray-300"} flex-1 transition-all duration-300`}></div>
+                              <div className={`h-full ${passwordStrength >= 2 ? getPasswordStrengthColor() : "bg-gray-300"} flex-1 transition-all duration-300`}></div>
+                              <div className={`h-full ${passwordStrength >= 3 ? getPasswordStrengthColor() : "bg-gray-300"} flex-1 transition-all duration-300`}></div>
+                              <div className={`h-full ${passwordStrength >= 4 ? getPasswordStrengthColor() : "bg-gray-300"} flex-1 transition-all duration-300`}></div>
+                            </div>
+                            <div className="flex items-center mt-1">
+                              <Info className="h-3 w-3 text-muted-foreground mr-1" />
+                              <p className="text-xs text-muted-foreground">
+                                Password should include uppercase letter, number, and be at least 6 characters
+                              </p>
+                            </div>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -305,7 +414,7 @@ const AuthPage = () => {
                     <Button 
                       type="submit" 
                       className={cn(
-                        "w-full transition-all duration-300 animate-fade-in hover:shadow-md",
+                        "w-full transition-all duration-700 animate-fade-in hover:shadow-lg hover:shadow-primary/20",
                         isSubmitting && "opacity-70"
                       )} 
                       disabled={isLoading || isSubmitting}

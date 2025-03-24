@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SendIcon, Bot, User } from 'lucide-react';
+import { SendIcon, Bot, User, Loader2, RefreshCw } from 'lucide-react';
 import { MainLayout } from '@/layouts/MainLayout';
 import { generateAIResponse, ChatMessage } from '@/services/aiChatService';
 import { toast } from "sonner";
@@ -18,6 +18,35 @@ const ChatPage = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load persisted chat data from sessionStorage
+  useEffect(() => {
+    const savedMessages = sessionStorage.getItem('fullChatMessages');
+    const savedQuery = sessionStorage.getItem('fullChatQuery');
+    
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages));
+      } catch (error) {
+        console.error("Error parsing saved chat messages:", error);
+      }
+    }
+    
+    if (savedQuery) {
+      setQuery(savedQuery);
+    }
+  }, []);
+
+  // Save chat data to sessionStorage
+  useEffect(() => {
+    if (messages.length > 1) { // Only save if there are user messages
+      sessionStorage.setItem('fullChatMessages', JSON.stringify(messages));
+    }
+    
+    if (query) {
+      sessionStorage.setItem('fullChatQuery', query);
+    }
+  }, [messages, query]);
 
   useEffect(() => {
     scrollToBottom();
@@ -35,18 +64,38 @@ const ChatPage = () => {
     const userMessage = { type: 'user' as const, content: query };
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
-    setQuery('');
 
     try {
       // Get AI response
       const response = await generateAIResponse(query);
       const botMessage = { type: 'bot' as const, content: response };
       setMessages(prev => [...prev, botMessage]);
+      // Clear query from session storage after successful response
+      sessionStorage.removeItem('fullChatQuery');
     } catch (error) {
       console.error("Error in chat:", error);
       toast.error("Failed to get a response. Please try again.");
+      // Add fallback error message
+      const errorMessage = { 
+        type: 'bot' as const, 
+        content: "I'm having trouble processing your request right now. Please try again later." 
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setQuery('');
+    }
+  };
+
+  const clearChat = () => {
+    if (window.confirm("Are you sure you want to clear the chat history?")) {
+      setMessages([{
+        type: 'bot',
+        content: 'Hello! I\'m ByteBolt\'s AI assistant powered by Google\'s Gemini 1.5 Pro. I can answer your questions about technology, programming, and more. How can I help you today?'
+      }]);
+      sessionStorage.removeItem('fullChatMessages');
+      sessionStorage.removeItem('fullChatQuery');
+      toast.success("Chat history cleared!");
     }
   };
 
@@ -54,12 +103,23 @@ const ChatPage = () => {
     <MainLayout>
       <div className="page-container py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">AI Tech Assistant</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">AI Tech Assistant</h1>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearChat}
+              className="transition-all hover:bg-destructive/10"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Clear Chat
+            </Button>
+          </div>
           <p className="text-muted-foreground mb-8">
             Ask our AI assistant any technology-related question. Powered by Google's Gemini 1.5 Pro model.
           </p>
           
-          <Card className="shadow-lg">
+          <Card className="shadow-lg hover:shadow-xl transition-all duration-500">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle>AI Tech Chat</CardTitle>
               <CardDescription>
@@ -68,11 +128,12 @@ const ChatPage = () => {
             </CardHeader>
             
             <CardContent className="p-4">
-              <div className="h-[500px] overflow-y-auto space-y-4 p-2">
+              <div className="h-[500px] overflow-y-auto space-y-4 p-2 scroll-m-4">
                 {messages.map((message, index) => (
                   <div 
                     key={index} 
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                    style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className={`flex items-start gap-2 max-w-[80%]`}>
                       {message.type === 'bot' && (
@@ -99,16 +160,15 @@ const ChatPage = () => {
                 ))}
                 
                 {isLoading && (
-                  <div className="flex justify-start">
+                  <div className="flex justify-start animate-fade-in">
                     <div className="flex items-start gap-2 max-w-[80%]">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
                         <Bot className="h-4 w-4 text-primary" />
                       </div>
                       <div className="rounded-lg px-4 py-2 bg-muted">
-                        <div className="flex space-x-2">
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                        <div className="flex items-center space-x-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span className="text-sm text-muted-foreground">Thinking...</span>
                         </div>
                       </div>
                     </div>
@@ -124,11 +184,20 @@ const ChatPage = () => {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Ask a technology question..."
-                  className="flex-1"
+                  className="flex-1 transition-all focus:ring-2 focus:ring-primary/50"
                   disabled={isLoading}
                 />
-                <Button type="submit" size="icon" disabled={isLoading}>
-                  <SendIcon className="h-4 w-4" />
+                <Button 
+                  type="submit" 
+                  size="icon" 
+                  disabled={isLoading}
+                  className="transition-all"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <SendIcon className="h-4 w-4" />
+                  )}
                 </Button>
               </form>
             </CardFooter>

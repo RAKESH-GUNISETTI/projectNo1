@@ -99,11 +99,11 @@ export default {
 					'50%': { borderColor: 'hsl(var(--foreground))' }
 				},
 				'slide-up': {
-					'0%': { transform: 'translateY(30px)', opacity: '0' }, // increased from 20px to 30px
+					'0%': { transform: 'translateY(40px)', opacity: '0' }, // increased from 30px to 40px
 					'100%': { transform: 'translateY(0)', opacity: '1' }
 				},
 				'slide-down': {
-					'0%': { transform: 'translateY(-30px)', opacity: '0' }, // increased from 20px to 30px
+					'0%': { transform: 'translateY(-40px)', opacity: '0' }, // increased from 30px to 40px
 					'100%': { transform: 'translateY(0)', opacity: '1' }
 				},
 				'slide-in-right': {
@@ -137,25 +137,37 @@ export default {
 				'cursor-pulse': {
 					'0%, 100%': { transform: 'scale(1)', opacity: '0.7' },
 					'50%': { transform: 'scale(1.3)', opacity: '0.5' }
+				},
+				'blob-move': {
+					'0%': { transform: 'translate(0px, 0px) scale(1)' },
+					'33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+					'66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+					'100%': { transform: 'translate(0px, 0px) scale(1)' }
+				},
+				'bounce-slow': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-20px)' }
 				}
 			},
 			animation: {
-				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.8s ease-out', // Slowed down from 0.5s to 0.8s
-				'fade-out': 'fade-out 0.6s ease-out', // Slowed down from 0.3s to 0.6s
-				'scale-in': 'scale-in 0.8s ease-out', // Slowed down from 0.4s to 0.8s
+				'accordion-down': 'accordion-down 0.3s ease-out', // Slowed from 0.2s to 0.3s
+				'accordion-up': 'accordion-up 0.3s ease-out', // Slowed from 0.2s to 0.3s
+				'fade-in': 'fade-in 1.2s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed from 0.8s to 1.2s
+				'fade-out': 'fade-out 0.9s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed from 0.6s to 0.9s
+				'scale-in': 'scale-in 1.2s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed from 0.8s to 1.2s
 				'typing': 'typing 3.5s steps(40, end), blink .75s step-end infinite',
-				'slide-up': 'slide-up 1s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed down from 0.6s to 1s
-				'slide-down': 'slide-down 1s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed down from 0.6s to 1s
-				'slide-in-right': 'slide-in-right 1s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed down from 0.6s to 1s
-				'slide-out-right': 'slide-out-right 0.6s ease-out', // Slowed down from 0.3s to 0.6s
-				'pulse-slow': 'pulse 7s cubic-bezier(0.4, 0, 0.6, 1) infinite', // Slowed down from 5s to 7s
-				'float': 'float 8s ease-in-out infinite', // Slowed down from 6s to 8s
-				'shimmer': 'shimmer 3s infinite linear', // Slowed down from 2s to 3s
-				'rotate-slow': 'rotate-slow 12s linear infinite', // Slowed down from 8s to 12s
-				'background-shine': 'background-shine 10s linear infinite', // Slowed down from 8s to 10s
-				'cursor-pulse': 'cursor-pulse 3s ease-in-out infinite'
+				'slide-up': 'slide-up 1.4s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed from 1s to 1.4s
+				'slide-down': 'slide-down 1.4s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed from 1s to 1.4s
+				'slide-in-right': 'slide-in-right 1.4s cubic-bezier(0.22, 1, 0.36, 1)', // Slowed from 1s to 1.4s
+				'slide-out-right': 'slide-out-right 0.9s ease-out', // Slowed from 0.6s to 0.9s
+				'pulse-slow': 'pulse 10s cubic-bezier(0.4, 0, 0.6, 1) infinite', // Slowed from 7s to 10s
+				'float': 'float 10s ease-in-out infinite', // Slowed from 8s to 10s
+				'shimmer': 'shimmer 4s infinite linear', // Slowed from 3s to 4s
+				'rotate-slow': 'rotate-slow 15s linear infinite', // Slowed from 12s to 15s
+				'background-shine': 'background-shine 13s linear infinite', // Slowed from 10s to 13s
+				'cursor-pulse': 'cursor-pulse 4s ease-in-out infinite', // Slowed from 3s to 4s
+				'blob-move': 'blob-move 15s infinite ease-in-out',
+				'bounce-slow': 'bounce-slow 6s ease-in-out infinite'
 			},
 			transitionProperty: {
 				'height': 'height',
@@ -166,6 +178,8 @@ export default {
 			transitionDuration: {
 				'1500': '1500ms',
 				'2000': '2000ms',
+				'2500': '2500ms',
+				'3000': '3000ms',
 			}
 		}
 	},

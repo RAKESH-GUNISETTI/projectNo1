@@ -10,7 +10,16 @@ import { useEffect, useRef, useState } from "react";
 const Index = () => {
   const pageRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
+  const cursorTrailRef = useRef<HTMLDivElement>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  
+  // Handle page refresh - scroll to top
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, []);
   
   // Handle cursor tracer effect
   useEffect(() => {
@@ -22,7 +31,15 @@ const Index = () => {
         setTimeout(() => {
           cursorRef.current!.style.left = `${e.clientX}px`;
           cursorRef.current!.style.top = `${e.clientY}px`;
-        }, 50);
+        }, 10); // Reduced delay for more responsive cursor
+      }
+      
+      // Handle cursor trail
+      if (cursorTrailRef.current) {
+        setTimeout(() => {
+          cursorTrailRef.current!.style.left = `${e.clientX}px`;
+          cursorTrailRef.current!.style.top = `${e.clientY}px`;
+        }, 150); // Larger delay for trail effect
       }
     };
 
@@ -33,7 +50,7 @@ const Index = () => {
     };
   }, []);
   
-  // Add enhanced scroll animation system with configurable animations
+  // Enhanced scroll animation system with configurable animations
   useEffect(() => {
     // Animation mapping for different effects
     const animationEffects: Record<string, string> = {
@@ -72,7 +89,7 @@ const Index = () => {
       elements.forEach(element => {
         const rect = element.getBoundingClientRect();
         // Adjust when animation triggers (element is 25% visible) - slowed down by triggering earlier
-        const isVisible = rect.top < window.innerHeight * 0.75;
+        const isVisible = rect.top < window.innerHeight * 0.85; // Increased visibility threshold
         
         if (isVisible) {
           // Check for custom animation type
@@ -93,7 +110,7 @@ const Index = () => {
     };
 
     // Initial check for elements in view
-    setTimeout(handleScroll, 300); // Increased initial delay for slower animations
+    setTimeout(handleScroll, 500); // Increased initial delay for slower animations
     
     // Listen for scroll events with throttling for performance
     let scrollTimeout: NodeJS.Timeout;
@@ -102,7 +119,7 @@ const Index = () => {
         scrollTimeout = setTimeout(() => {
           handleScroll();
           scrollTimeout = undefined as unknown as NodeJS.Timeout;
-        }, 150); // Increased throttle time for slower animations
+        }, 200); // Increased throttle time for slower animations
       }
     };
     
@@ -132,10 +149,19 @@ const Index = () => {
   return (
     <MainLayout>
       <div className="page-container" ref={pageRef}>
-        {/* Cursor tracer effect */}
+        {/* Cursor tracer effects - enhanced */}
         <div 
           ref={cursorRef}
-          className="fixed w-8 h-8 pointer-events-none z-50 rounded-full bg-primary/20 blur-md transition-all duration-300 opacity-70 hidden md:block"
+          className="fixed w-12 h-12 pointer-events-none z-50 rounded-full bg-primary/20 blur-md transition-all duration-200 opacity-70 hidden md:block"
+          style={{
+            left: mousePosition.x,
+            top: mousePosition.y,
+            transform: 'translate(-50%, -50%)'
+          }}
+        />
+        <div 
+          ref={cursorTrailRef}
+          className="fixed w-24 h-24 pointer-events-none z-40 rounded-full bg-primary/10 blur-xl transition-all duration-500 opacity-40 hidden md:block animate-pulse-slow"
           style={{
             left: mousePosition.x,
             top: mousePosition.y,
@@ -143,11 +169,12 @@ const Index = () => {
           }}
         />
         
-        {/* Animated background elements */}
+        {/* Animated background elements - enhanced */}
         <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
           <div className="absolute -top-20 -right-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl parallax" data-speed="0.2"></div>
           <div className="absolute top-1/3 -left-40 w-80 h-80 bg-purple-500/5 rounded-full blur-3xl parallax" data-speed="0.3"></div>
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl parallax" data-speed="0.15"></div>
+          <div className="absolute top-2/3 left-1/3 w-72 h-72 bg-green-500/5 rounded-full blur-3xl parallax" data-speed="0.25"></div>
         </div>
         
         <Hero />

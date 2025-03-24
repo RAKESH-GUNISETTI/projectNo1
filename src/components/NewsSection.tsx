@@ -1,179 +1,192 @@
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { NewsItem, fetchLatestNews } from '@/services/newsService';
-import { ArrowRight, ExternalLink, ChevronDown, ChevronUp, Calendar, Tag, User } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { fetchLatestNews, NewsItem } from '@/services/newsService';
+import { Clock, ArrowRight } from 'lucide-react';
+import { format } from 'date-fns';
 
 export function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showMore, setShowMore] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getNews = async () => {
-      setIsLoading(true);
       try {
-        const data = await fetchLatestNews();
-        setNews(data.slice(0, 9)); // Showing up to 9 news items (3 rows of 3)
+        const newsData = await fetchLatestNews();
+        setNews(newsData);
       } catch (error) {
         console.error('Error fetching news:', error);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     getNews();
   }, []);
 
-  // Function to render news cards with animation
-  const renderNewsCard = (item: NewsItem, index: number, rowIndex: number = 0) => {
-    const cardStyles = [
-      "overflow-hidden shadow-sm hover:shadow-lg transition-all duration-700 hover:translate-y-[-4px] scroll-animate",
-      "glass-card overflow-hidden shadow-sm hover:shadow-lg transition-all duration-700 hover:translate-y-[-4px] scroll-animate",
-      "overflow-hidden shadow-sm hover:shadow-lg hover:shadow-primary/10 transition-all duration-700 hover:translate-y-[-4px] scroll-animate bg-secondary/30"
+  // Function to get a random color for tags
+  const getRandomTagColor = () => {
+    const colors = [
+      'bg-red-500/10 text-red-500',
+      'bg-blue-500/10 text-blue-500',
+      'bg-green-500/10 text-green-500',
+      'bg-yellow-500/10 text-yellow-500',
+      'bg-purple-500/10 text-purple-500',
+      'bg-indigo-500/10 text-indigo-500',
+      'bg-pink-500/10 text-pink-500',
+      'bg-cyan-500/10 text-cyan-500'
     ];
-    
-    const animations = [
-      "slide-up",
-      "slide-right",
-      "fade-in"
-    ];
-    
-    return (
-      <Card 
-        key={item.id} 
-        className={cardStyles[rowIndex % cardStyles.length]}
-        style={{ animationDelay: `${(index * 200) + (rowIndex * 300)}ms` }}
-        data-animation={animations[rowIndex % animations.length]}
-        data-delay={`${index * 150}`}
-      >
-        <div className="w-full aspect-video overflow-hidden group">
-          <img 
-            src={item.imageUrl} 
-            alt={item.title} 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          />
-        </div>
-        <CardHeader>
-          <CardTitle className="line-clamp-2 hover:text-primary transition-colors">{item.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm line-clamp-3 mb-4">{item.summary}</p>
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {new Date(item.date).toLocaleDateString()}
-            </div>
-            <div className="flex items-center gap-1">
-              <User className="h-3 w-3" />
-              {item.source}
-            </div>
-            {item.category && (
-              <div className="flex items-center gap-1">
-                <Tag className="h-3 w-3" />
-                {item.category}
-              </div>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-end items-center">
-          <Button variant="ghost" size="sm" asChild className="group">
-            <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1">
-              Read more
-              <ExternalLink className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
-            </a>
-          </Button>
-        </CardFooter>
-      </Card>
-    );
+    return colors[Math.floor(Math.random() * colors.length)];
   };
 
+  // Create an extended news array with additional items
+  const extendedNews = [...news, ...news.slice(0, 2)];
+
   return (
-    <section id="news" className="section-spacing relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-1/4 -right-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-1/3 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse-slow"></div>
-      </div>
-      
-      <div className="page-container relative z-10">
-        <div className="text-center max-w-2xl mx-auto mb-16 scroll-animate" data-animation="fade-in" data-delay="200">
+    <section id="news" className="section-spacing">
+      <div className="page-container">
+        <div className="text-center max-w-2xl mx-auto mb-12 scroll-animate" data-animation="slide-up" data-delay="200">
           <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             Latest News
           </div>
           <h2 className="text-3xl font-bold sm:text-4xl mb-4">Stay updated with tech trends</h2>
           <p className="text-muted-foreground">
-            Get the latest technology news and insights from around the world. We refresh our content with every visit.
+            Get the latest technology news and stay informed about emerging trends, product launches, and industry insights.
           </p>
         </div>
 
-        {isLoading ? (
-          <div className="grid md:grid-cols-3 gap-8">
-            {[...Array(3)].map((_, index) => (
-              <Card key={index} className="overflow-hidden shadow-sm">
-                <div className="w-full aspect-video bg-muted animate-pulse"></div>
-                <CardHeader>
-                  <div className="h-6 w-3/4 bg-muted animate-pulse rounded"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                    <div className="h-4 w-2/3 bg-muted animate-pulse rounded"></div>
+        {/* Featured news item */}
+        {!loading && news.length > 0 && (
+          <div className="mb-10 scroll-animate" data-animation="fade-in" data-delay="300">
+            <Card className="overflow-hidden hover:shadow-xl transition-all duration-500">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="h-64 md:h-full bg-secondary">
+                  <img 
+                    src={news[0].imageUrl} 
+                    alt={news[0].title} 
+                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
+                  />
+                </div>
+                <div className="p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Badge className={getRandomTagColor()}>
+                        {news[0].source}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {format(new Date(news[0].publishedAt), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                    <CardTitle className="text-2xl mb-3 transition-colors hover:text-primary">{news[0].title}</CardTitle>
+                    <CardDescription className="text-base">{news[0].description}</CardDescription>
                   </div>
-                </CardContent>
-                <CardFooter>
-                  <div className="h-4 w-1/3 bg-muted animate-pulse rounded"></div>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-12">
-            {/* First row of news - Standard cards */}
-            <div className="grid md:grid-cols-3 gap-8">
-              {news.slice(0, 3).map((item, index) => renderNewsCard(item, index, 0))}
-            </div>
-            
-            {/* Second row of news - Glass cards */}
-            {news.length > 3 && (
-              <div className="grid md:grid-cols-3 gap-8">
-                {news.slice(3, 6).map((item, index) => renderNewsCard(item, index, 1))}
+                  <CardFooter className="px-0 pt-4">
+                    <Button variant="outline" className="group" asChild>
+                      <Link to={`/news/${news[0].id}`}>
+                        Read Full Article
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </div>
               </div>
-            )}
-            
-            {/* Third row of news - Accent colored cards */}
-            {news.length > 6 && (
-              <div className={`grid md:grid-cols-3 gap-8 transition-all duration-700 ${showMore ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 h-0 overflow-hidden md:h-auto md:overflow-visible'}`}>
-                {news.slice(6, 9).map((item, index) => renderNewsCard(item, index, 2))}
-              </div>
-            )}
-            
-            {/* Toggle button for mobile and additional news */}
-            <div className="text-center">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowMore(!showMore)}
-                className="group transition-all duration-300 hover:shadow-md"
-              >
-                {showMore ? (
-                  <>Show less <ChevronUp className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:-translate-y-1" /></>
-                ) : (
-                  <>Show more <ChevronDown className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-y-1" /></>
-                )}
-              </Button>
-            </div>
+            </Card>
           </div>
         )}
 
-        <div className="mt-12 text-center scroll-animate" data-animation="fade-in" data-delay="400">
-          <Button asChild variant="outline" className="group hover:shadow-md hover:bg-primary/5 transition-all duration-300">
-            <Link to="/news">
-              View all news
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
+        {/* News Grid - First Row */}
+        <div className="grid md:grid-cols-3 gap-6 mb-10">
+          {!loading && news.slice(1, 4).map((item, index) => (
+            <Card 
+              key={`row1-${item.id}-${index}`} 
+              className="overflow-hidden hover:shadow-lg transition-all duration-500 scroll-animate" 
+              data-animation="zoom-in" 
+              data-delay={`${(index + 1) * 150 + 300}`}
+            >
+              <div className="h-48 bg-secondary">
+                <img 
+                  src={item.imageUrl} 
+                  alt={item.title} 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
+                />
+              </div>
+              <CardHeader className="p-4 pb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className={getRandomTagColor()}>
+                    {item.source}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground flex items-center">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {format(new Date(item.publishedAt), 'MMM d, yyyy')}
+                  </span>
+                </div>
+                <CardTitle className="text-lg transition-colors hover:text-primary">{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <CardDescription className="line-clamp-2">{item.description}</CardDescription>
+              </CardContent>
+              <CardFooter className="p-4 pt-0">
+                <Button variant="ghost" size="sm" className="group p-0" asChild>
+                  <Link to={`/news/${item.id}`}>
+                    Read More
+                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+
+        {/* News Grid - Second Row (Extended) */}
+        <div className="grid md:grid-cols-4 gap-6 mb-10">
+          {!loading && extendedNews.slice(4, 8).map((item, index) => (
+            <Card 
+              key={`row2-${item.id}-${index}`} 
+              className="overflow-hidden hover:shadow-lg transition-all duration-500 scroll-animate" 
+              data-animation="zoom-in" 
+              data-delay={`${(index + 1) * 150 + 600}`}
+            >
+              <div className="h-40 bg-secondary">
+                <img 
+                  src={item.imageUrl} 
+                  alt={item.title} 
+                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
+                />
+              </div>
+              <CardHeader className="p-3 pb-1">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge className={getRandomTagColor()}>
+                    {item.source}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground flex items-center">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {format(new Date(item.publishedAt), 'MMM d, yyyy')}
+                  </span>
+                </div>
+                <CardTitle className="text-base transition-colors hover:text-primary">{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <CardDescription className="text-sm line-clamp-2">{item.description}</CardDescription>
+              </CardContent>
+              <CardFooter className="p-3 pt-0">
+                <Button variant="ghost" size="sm" className="group p-0 text-sm" asChild>
+                  <Link to={`/news/${item.id}`}>
+                    Read More
+                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+
+        <div className="text-center scroll-animate" data-animation="fade-in" data-delay="900">
+          <Button asChild size="lg">
+            <Link to="/news">View All Tech News</Link>
           </Button>
         </div>
       </div>
