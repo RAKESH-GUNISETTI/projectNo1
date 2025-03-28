@@ -13,13 +13,25 @@ interface Challenge {
   id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: 'Algorithm' | 'Frontend' | 'Backend' | 'Database' | 'Security';
+  difficulty: string;
+  category: string;
   xp: number;
+  timeLimit?: number;
   isLocked: boolean;
-  icon: React.ReactNode;
   status?: 'not_started' | 'in_progress' | 'completed';
+  icon?: React.ReactNode;
   timeSpent?: number;
+  progress?: {
+    id: string;
+    challenge_id: string;
+    user_id: string;
+    status: string;
+    started_at: string;
+    completed_at: string | null;
+    time_spent: number;
+    score: number;
+    earned_credits: number;
+  } | null;
 }
 
 interface ChallengeProgress {
@@ -30,6 +42,8 @@ interface ChallengeProgress {
   started_at: string;
   completed_at: string | null;
   id: string;
+  score: number;
+  earned_credits: number;
 }
 
 const ChallengesPage = () => {
@@ -167,89 +181,176 @@ const ChallengesPage = () => {
     }
   };
 
-  const startChallenge = async (challengeId: string) => {
-    if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login to start this challenge.",
-        variant: "default",
-      });
-      navigate('/login');
-      return;
-    }
-    
-    if (activeChallenge && activeChallenge !== challengeId) {
-      toast({
-        title: "Active Challenge",
-        description: "You already have an active challenge. Complete or quit it before starting a new one.",
-        variant: "default",
-      });
-      return;
-    }
-    
+  const fetchChallenges = async () => {
     try {
       setIsLoading(true);
-      
-      const progress = userChallengeProgress[challengeId];
-      
-      if (progress && progress.status === 'completed') {
-        toast({
-          title: "Challenge Completed",
-          description: "You've already completed this challenge!",
-          variant: "default",
-        });
-        return;
+      if (!user) return;
+
+      // Fetch challenges from mock data for now
+      const mockChallenges: Challenge[] = [
+        {
+          id: "c1",
+          title: "HTML & CSS Basics",
+          description: "Test your HTML and CSS knowledge",
+          difficulty: "Beginner",
+          category: "Frontend",
+          xp: 50,
+          timeLimit: 30,
+          isLocked: false,
+          status: 'not_started',
+          icon: <Code className="h-5 w-5" />
+        },
+        {
+          id: "c2",
+          title: "Python Basics",
+          description: "Simple Python programming challenges",
+          difficulty: "Beginner",
+          category: "Programming",
+          xp: 50,
+          timeLimit: 30,
+          isLocked: false,
+          status: 'not_started',
+          icon: <Brain className="h-5 w-5" />
+        },
+        {
+          id: "c3",
+          title: "SQL Basics",
+          description: "Basic SQL query challenges",
+          difficulty: "Beginner",
+          category: "Database",
+          xp: 50,
+          timeLimit: 30,
+          isLocked: false,
+          status: 'not_started',
+          icon: <Database className="h-5 w-5" />
+        }
+      ];
+
+      // Fetch user's progress for all challenges
+      const { data: progressData, error: progressError } = await supabase
+        .from('challenge_progress')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (progressError) {
+        console.error('Error fetching progress:', progressError);
+        // Don't throw error here, just log it and continue with empty progress
       }
-      
-      const now = new Date().toISOString();
-      
-      if (!progress) {
-        const { error } = await supabase
-          .from('challenge_progress')
-          .insert([{
-            challenge_id: challengeId,
-            user_id: user.id,
-            status: 'in_progress',
-            time_spent: 0,
-            started_at: now,
-            completed_at: null
-          }]);
-          
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
+
+      // Create a map of challenge progress with proper type casting
+      const progressMap = new Map(
+        (progressData || []).map(progress => [
+          progress.challenge_id, 
+          {
+            ...progress,
+            score: (progress as any).score || 0,
+            earned_credits: (progress as any).earned_credits || 0,
+            time_spent: progress.time_spent || 0
+          } as ChallengeProgress
+        ])
+      );
+
+      // Combine challenges with progress
+      const challengesWithProgress = mockChallenges.map(challenge => ({
+        ...challenge,
+        progress: progressMap.get(challenge.id) || null,
+        status: (progressMap.get(challenge.id)?.status as 'not_started' | 'in_progress' | 'completed') || 'not_started',
+        timeSpent: progressMap.get(challenge.id)?.time_spent || 0
+      }));
+
+      setChallenges(challengesWithProgress);
+    } catch (error) {
+      console.error('Error in fetchChallenges:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load challenges. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startChallenge = async (challengeId: string) => {
+    if (!user) return;
+
+    try {
+      setIsLoading(true);
+
+      // Check if challenge exists in our mock data
+      const challenge = challenges.find(c => c.id === challengeId);
+      if (!challenge) {
+        throw new Error("Challenge not found");
+      }
+
+      // Check if user already has progress for this challenge
+      const { data: existingProgress, error: progressError } = await supabase
+        .from('challenge_progress')
+        .select('*')
+        .eq('challenge_id', challengeId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (progressError && progressError.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('Error checking progress:', progressError);
+        throw new Error("Failed to check challenge progress");
+      }
+
+      if (existingProgress) {
+        // If progress exists, update it to restart the challenge
+        const { error: updateError } = await supabase
           .from('challenge_progress')
           .update({
             status: 'in_progress',
-            started_at: now
+            started_at: new Date().toISOString(),
+            completed_at: null,
+            score: 0,
+            earned_credits: 0
           })
           .eq('challenge_id', challengeId)
           .eq('user_id', user.id);
-          
-        if (error) throw error;
+
+        if (updateError) {
+          console.error('Error updating progress:', updateError);
+          throw new Error("Failed to update challenge progress");
+        }
+      } else {
+        // Create new progress entry
+        const { error: insertError } = await supabase
+          .from('challenge_progress')
+          .insert({
+            challenge_id: challengeId,
+            user_id: user.id,
+            status: 'in_progress',
+            started_at: new Date().toISOString(),
+            score: 0,
+            earned_credits: 0
+          });
+
+        if (insertError) {
+          console.error('Error creating progress:', insertError);
+          throw new Error("Failed to create challenge progress");
+        }
       }
-      
-      setActiveChallenge(challengeId);
-      
-      setChallenges(prevChallenges => 
-        prevChallenges.map(challenge => 
-          challenge.id === challengeId 
-            ? { ...challenge, status: 'in_progress' } 
-            : challenge
-        )
-      );
-      
-      navigate(`/challenges/${challengeId}`);
-      
+
+      // Update local state
+      setChallenges(prev => prev.map(c => 
+        c.id === challengeId 
+          ? { ...c, progress: { ...c.progress, status: 'in_progress', started_at: new Date().toISOString() } }
+          : c
+      ));
+
       toast({
         title: "Challenge Started",
-        description: "Good luck with your challenge!",
+        description: "You can now begin working on the challenge.",
       });
+
+      navigate(`/challenges/${challengeId}`);
     } catch (error) {
       console.error('Error starting challenge:', error);
       toast({
         title: "Error",
-        description: "Failed to start the challenge. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to start the challenge. Please try again.",
         variant: "destructive",
       });
     } finally {

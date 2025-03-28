@@ -47,7 +47,7 @@ interface ChallengeDetail {
 const ChallengeDetailPage = () => {
   const { challengeId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   
   const [challenge, setChallenge] = useState<ChallengeDetail | null>(null);
@@ -78,45 +78,199 @@ const ChallengeDetailPage = () => {
     try {
       setIsLoading(true);
       // In a real app, this would fetch from your backend
-      // For now, we'll use mock data
+      // For now, we'll use mock data with simple coding challenges
       const mockChallenge: ChallengeDetail = {
         id: challengeId || '',
-        title: "Build a Responsive Nav Menu",
-        description: "Create a responsive navigation menu that adapts to different screen sizes using CSS and JavaScript.",
+        title: "Basic JavaScript Challenges",
+        description: "Complete these simple coding challenges to test your JavaScript skills",
         difficulty: "Beginner",
-        category: "Frontend",
-        xp: 100,
-        timeLimit: 60,
+        category: "Programming",
+        xp: 50,
+        timeLimit: 30,
         questions: [
           {
             id: "q1",
             type: "multiple_choice",
-            question: "Which CSS property is used to make a flex container wrap its items?",
-            options: ["flex-wrap", "flex-flow", "flex-direction", "flex-basis"],
-            correctAnswer: "flex-wrap",
+            question: "What is the correct way to declare a variable in JavaScript?",
+            options: ["var x = 5", "let x = 5", "const x = 5", "All of the above"],
+            correctAnswer: "All of the above",
             points: 10
           },
           {
             id: "q2",
-            type: "true_false",
-            question: "Media queries are used to make websites responsive.",
-            options: ["True", "False"],
-            correctAnswer: "True",
-            points: 5
+            type: "code",
+            question: `Write a function to add two numbers:
+function add(a, b) {
+  // Your code here
+}
+
+Example:
+add(2, 3) should return 5
+add(-1, 1) should return 0`,
+            correctAnswer: `function add(a, b) {
+  return a + b;
+}`,
+            points: 15
+          },
+          {
+            id: "q3",
+            type: "code",
+            question: `Write a function to reverse a string:
+function reverseString(str) {
+  // Your code here
+}
+
+Example:
+reverseString("hello") should return "olleh"
+reverseString("world") should return "dlrow"`,
+            correctAnswer: `function reverseString(str) {
+  return str.split('').reverse().join('');
+}`,
+            points: 15
+          },
+          {
+            id: "q4",
+            type: "code",
+            question: `Write a function to check if a number is even:
+function isEven(num) {
+  // Your code here
+}
+
+Example:
+isEven(2) should return true
+isEven(3) should return false`,
+            correctAnswer: `function isEven(num) {
+  return num % 2 === 0;
+}`,
+            points: 10
+          },
+          {
+            id: "q5",
+            type: "code",
+            question: `Write a function to find the largest number in an array:
+function findLargest(arr) {
+  // Your code here
+}
+
+Example:
+findLargest([1, 5, 3, 9, 2]) should return 9
+findLargest([10, 20, 30]) should return 30`,
+            correctAnswer: `function findLargest(arr) {
+  return Math.max(...arr);
+}`,
+            points: 15
           }
         ],
-        assignments: [
-          {
-            id: "a1",
-            title: "Create Navigation Menu",
-            description: "Build a responsive navigation menu using HTML, CSS, and JavaScript",
-            instructions: "Create a navigation menu that:\n1. Is responsive\n2. Has a hamburger menu for mobile\n3. Includes smooth transitions\n4. Is accessible",
-            deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            submissionType: "code",
-            maxPoints: 50
-          }
-        ]
+        assignments: []
       };
+
+      // Add more challenges based on challenge type
+      if (challengeId === "c1") {
+        mockChallenge.title = "HTML & CSS Basics";
+        mockChallenge.description = "Test your HTML and CSS knowledge";
+        mockChallenge.questions = [
+          {
+            id: "q1",
+            type: "multiple_choice",
+            question: "Which HTML tag is used to create a hyperlink?",
+            options: ["<link>", "<a>", "<href>", "<url>"],
+            correctAnswer: "<a>",
+            points: 10
+          },
+          {
+            id: "q2",
+            type: "code",
+            question: `Create a simple HTML button with CSS styling:
+1. Button should be blue
+2. Text should be white
+3. Add hover effect
+4. Add rounded corners
+
+Your code should include both HTML and CSS.`,
+            correctAnswer: `<button class="styled-button">Click me</button>
+
+<style>
+.styled-button {
+  background-color: blue;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.styled-button:hover {
+  background-color: darkblue;
+}
+</style>`,
+            points: 20
+          }
+        ];
+      }
+
+      if (challengeId === "c2") {
+        mockChallenge.title = "Python Basics";
+        mockChallenge.description = "Simple Python programming challenges";
+        mockChallenge.questions = [
+          {
+            id: "q1",
+            type: "multiple_choice",
+            question: "Which of the following is NOT a Python data type?",
+            options: ["int", "string", "char", "float"],
+            correctAnswer: "char",
+            points: 10
+          },
+          {
+            id: "q2",
+            type: "code",
+            question: `Write a Python function to calculate the factorial of a number:
+def factorial(n):
+    # Your code here
+
+Example:
+factorial(5) should return 120
+factorial(3) should return 6`,
+            correctAnswer: `def factorial(n):
+    if n == 0 or n == 1:
+        return 1
+    return n * factorial(n - 1)`,
+            points: 20
+          }
+        ];
+      }
+
+      if (challengeId === "c3") {
+        mockChallenge.title = "SQL Basics";
+        mockChallenge.description = "Basic SQL query challenges";
+        mockChallenge.questions = [
+          {
+            id: "q1",
+            type: "multiple_choice",
+            question: "Which SQL keyword is used to retrieve data from a database?",
+            options: ["GET", "SELECT", "FETCH", "RETRIEVE"],
+            correctAnswer: "SELECT",
+            points: 10
+          },
+          {
+            id: "q2",
+            type: "code",
+            question: `Write a SQL query to find all users who are older than 18:
+Table: users
+Columns: id, name, age, email
+
+Your query should:
+1. Select all columns
+2. Filter users by age
+3. Order results by name`,
+            correctAnswer: `SELECT *
+FROM users
+WHERE age > 18
+ORDER BY name;`,
+            points: 20
+          }
+        ];
+      }
 
       setChallenge(mockChallenge);
       if (mockChallenge.timeLimit) {
@@ -126,7 +280,7 @@ const ChallengeDetailPage = () => {
       console.error('Error fetching challenge details:', error);
       toast({
         title: "Error",
-        description: "Failed to load challenge details.",
+        description: "Failed to load challenge details. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -163,7 +317,18 @@ const ChallengeDetailPage = () => {
       // Calculate score
       challenge.questions.forEach(question => {
         const userAnswer = answers[question.id];
-        if (Array.isArray(question.correctAnswer)) {
+        if (question.type === 'code') {
+          // For code questions, we'll do a basic string comparison
+          // In a real app, you'd want to use a proper code evaluation system
+          const normalizedUserAnswer = typeof userAnswer === 'string' ? userAnswer.replace(/\s+/g, ' ').trim() : '';
+          const normalizedCorrectAnswer = typeof question.correctAnswer === 'string' ? question.correctAnswer.replace(/\s+/g, ' ').trim() : '';
+          if (normalizedUserAnswer === normalizedCorrectAnswer) {
+            totalScore += question.points;
+          } else {
+            // Partial credit for code questions
+            totalScore += question.points * 0.5;
+          }
+        } else if (Array.isArray(question.correctAnswer)) {
           if (Array.isArray(userAnswer) && 
               question.correctAnswer.length === userAnswer.length &&
               question.correctAnswer.every(ans => userAnswer.includes(ans))) {
@@ -174,22 +339,56 @@ const ChallengeDetailPage = () => {
         }
       });
 
-      // Update progress in database
-      const { error } = await supabase
+      // Calculate rewards based on performance
+      const maxPossibleScore = challenge.questions.reduce((sum, q) => sum + q.points, 0);
+      const performancePercentage = (totalScore / maxPossibleScore) * 100;
+      
+      // Calculate credits based on performance
+      let earnedCredits = 0;
+      if (performancePercentage >= 90) {
+        earnedCredits = challenge.xp * 1.5; // 150% of base XP for excellent performance
+      } else if (performancePercentage >= 75) {
+        earnedCredits = challenge.xp * 1.25; // 125% of base XP for good performance
+      } else if (performancePercentage >= 60) {
+        earnedCredits = challenge.xp; // Base XP for passing performance
+      } else {
+        earnedCredits = challenge.xp * 0.5; // 50% of base XP for below passing
+      }
+
+      // Update progress and rewards in database
+      const { error: progressError } = await supabase
         .from('challenge_progress')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          score: totalScore
+          score: totalScore,
+          earned_credits: earnedCredits,
+          submission: assignmentSubmission
         })
         .eq('challenge_id', challenge.id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (progressError) {
+        console.error('Error updating progress:', progressError);
+        throw new Error("Failed to update challenge progress");
+      }
+
+      // Update user's credits
+      const { error: creditsError } = await supabase
+        .from('profiles')
+        .update({
+          credits: (profile?.credits || 0) + earnedCredits
+        })
+        .eq('id', user.id);
+
+      if (creditsError) {
+        console.error('Error updating credits:', creditsError);
+        throw new Error("Failed to update user credits");
+      }
 
       toast({
-        title: "Quiz Completed",
-        description: `Your score: ${totalScore} points`,
+        title: "Challenge Completed!",
+        description: `You earned ${earnedCredits} credits with a score of ${totalScore}/${maxPossibleScore} (${Math.round(performancePercentage)}%)`,
       });
 
       navigate('/challenges');
@@ -197,7 +396,7 @@ const ChallengeDetailPage = () => {
       console.error('Error submitting quiz:', error);
       toast({
         title: "Error",
-        description: "Failed to submit your answers.",
+        description: error instanceof Error ? error.message : "Failed to submit your answers. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -212,21 +411,33 @@ const ChallengeDetailPage = () => {
       setIsSubmitting(true);
 
       // In a real app, you would handle file uploads here
-      const { error } = await supabase
-        .from('assignment_submissions')
-        .insert([{
-          challenge_id: challenge.id,
-          user_id: user.id,
-          assignment_id: challenge.assignments[0].id,
+      const { error: submissionError } = await supabase
+        .from('challenge_progress')
+        .update({
           submission: assignmentSubmission,
           submitted_at: new Date().toISOString()
-        }]);
+        })
+        .eq('challenge_id', challenge.id)
+        .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (submissionError) throw submissionError;
+
+      // Award base credits for submitting the assignment
+      const earnedCredits = challenge.xp * 0.5; // 50% of base XP for submission
+
+      // Update user's credits
+      const { error: creditsError } = await supabase
+        .from('profiles')
+        .update({
+          credits: (profile?.credits || 0) + earnedCredits
+        })
+        .eq('id', user.id);
+
+      if (creditsError) throw creditsError;
 
       toast({
         title: "Assignment Submitted",
-        description: "Your submission has been received.",
+        description: `You earned ${earnedCredits} credits for submitting your assignment. Additional credits may be awarded after review.`,
       });
 
       navigate('/challenges');
