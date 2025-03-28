@@ -1,8 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { Button } from '@/components/ui/button';
 
 type Profile = {
   id: string;
@@ -12,157 +9,94 @@ type Profile = {
   is_premium: boolean;
 };
 
+interface User {
+  id: string;
+  email: string;
+  username?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
-  session: Session | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  resendConfirmationEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'bytebolt_user';
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up the auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('Auth state changed:', event);
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        
-        if (newSession?.user) {
-          await fetchProfile(newSession.user.id);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      
-      if (existingSession?.user) {
-        fetchProfile(existingSession.user.id).finally(() => {
-          setIsLoading(false);
+    // Check for existing user in localStorage
+    const storedUser = localStorage.getItem(STORAGE_KEY);
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        // Create a simple profile from user data
+        setProfile({
+          id: parsedUser.id,
+          username: parsedUser.username || parsedUser.email.split('@')[0],
+          avatar_url: null,
+          credits: 0,
+          is_premium: false
         });
-      } else {
-        setIsLoading(false);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem(STORAGE_KEY);
       }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    }
+    setIsLoading(false);
   }, []);
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        throw error;
-      }
-
-      if (data) {
-        setProfile(data as Profile);
-      } else {
-        console.log('No profile found for user ID:', userId);
-        // If no profile exists, create one
-        await createProfile(userId);
-      }
-    } catch (error) {
-      console.error('Error in fetchProfile:', error);
-    }
-  };
-
-  const createProfile = async (userId: string) => {
-    try {
-      const username = user?.email?.split('@')[0] || 'user';
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert([
-          { 
-            id: userId,
-            username,
-            credits: 0,
-            is_premium: false
-          }
-        ])
-        .select('*')
-        .single();
-
-      if (error) {
-        console.error('Error creating profile:', error);
-        throw error;
-      }
-
-      if (data) {
-        setProfile(data as Profile);
-      }
-    } catch (error) {
-      console.error('Error in createProfile:', error);
-    }
-  };
-
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
-  };
 
   const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
+      
+      // Simple validation
+      if (!email || !password) {
+        throw new Error("Please enter both email and password");
+      }
+
+      // Simple email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      // In a real app, this would be an API call
+      // For demo purposes, we'll create a simple user object
+      const userData: User = {
+        id: Math.random().toString(36).substr(2, 9),
         email,
-        password,
+        username: email.split('@')[0]
+      };
+
+      // Store user in localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      setUser(userData);
+      
+      // Create a simple profile
+      setProfile({
+        id: userData.id,
+        username: userData.username,
+        avatar_url: null,
+        credits: 0,
+        is_premium: false
       });
 
-      if (error) {
-        // Check if the error is due to unconfirmed email
-        if (error.message.includes('Email not confirmed')) {
-          toast({
-            title: "Email not confirmed",
-            description: "Please check your email for the confirmation link. You can request a new one if needed.",
-            action: (
-              <Button
-                variant="outline"
-                onClick={() => resendConfirmationEmail(email)}
-              >
-                Resend Confirmation
-              </Button>
-            ),
-          });
-          throw new Error("Please confirm your email before signing in");
-        }
-        throw error;
-      }
-
-      if (data?.user) {
-        toast({
-          title: "Welcome back!",
-          description: "You've successfully signed in.",
-        });
-      }
+      toast({
+        title: "Welcome back!",
+        description: "You've successfully signed in.",
+      });
     } catch (error: any) {
       toast({
         title: "Error signing in",
@@ -179,45 +113,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // Validate email format
+      // Simple validation
+      if (!email || !password) {
+        throw new Error("Please enter both email and password");
+      }
+
+      // Simple email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         throw new Error("Please enter a valid email address");
       }
       
-      // Validate password strength
+      // Simple password validation
       if (password.length < 6) {
         throw new Error("Password must be at least 6 characters long");
       }
-      
-      const { data, error } = await supabase.auth.signUp({
+
+      // In a real app, this would be an API call
+      // For demo purposes, we'll create a simple user object
+      const userData: User = {
+        id: Math.random().toString(36).substr(2, 9),
         email,
-        password,
-        options: {
-          data: {
-            username: username || email.split('@')[0],
-          },
-        },
+        username: username || email.split('@')[0]
+      };
+
+      // Store user in localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      setUser(userData);
+      
+      // Create a simple profile
+      setProfile({
+        id: userData.id,
+        username: userData.username,
+        avatar_url: null,
+        credits: 0,
+        is_premium: false
       });
 
-      if (error) {
-        throw error;
-      }
-
-      if (data?.user) {
-        toast({
-          title: "Account created!",
-          description: "Please check your email for the confirmation link. You can request a new one if needed.",
-          action: (
-            <Button
-              variant="outline"
-              onClick={() => resendConfirmationEmail(email)}
-            >
-              Resend Confirmation
-            </Button>
-          ),
-        });
-      }
+      toast({
+        title: "Account created!",
+        description: "You've successfully signed up.",
+      });
     } catch (error: any) {
       toast({
         title: "Error signing up",
@@ -230,37 +166,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const resendConfirmationEmail = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Confirmation email sent",
-        description: "Please check your email for the confirmation link.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error sending confirmation email",
-        description: error.message || "Please try again later.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const signOut = async () => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
+      // Remove user from localStorage
+      localStorage.removeItem(STORAGE_KEY);
+      setUser(null);
+      setProfile(null);
+      
       toast({
         title: "Signed out",
         description: "You've been successfully signed out.",
@@ -281,13 +194,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         user,
         profile,
-        session,
         isLoading,
         signIn,
         signUp,
         signOut,
-        refreshProfile,
-        resendConfirmationEmail,
       }}
     >
       {children}

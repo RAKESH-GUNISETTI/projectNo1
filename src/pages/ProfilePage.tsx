@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
@@ -7,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';
-import { CreditCard, Award, CheckCircle2, Clock, User, Mail, Calendar } from 'lucide-react';
+import { CreditCard, Award, CheckCircle2, Clock, User, Mail, Calendar, Edit2, Save, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface CompletedTask {
   id: string;
@@ -15,6 +18,14 @@ interface CompletedTask {
   type: string;
   date: string;
   points: number;
+}
+
+interface ActivityHistory {
+  id: string;
+  action: string;
+  details: string;
+  timestamp: string;
+  type: 'challenge' | 'chat' | 'profile' | 'system';
 }
 
 const mockCompletedTasks: CompletedTask[] = [
@@ -41,16 +52,91 @@ const mockCompletedTasks: CompletedTask[] = [
   }
 ];
 
+const mockActivityHistory: ActivityHistory[] = [
+  {
+    id: "1",
+    action: "Completed Challenge",
+    details: "Build a Responsive Nav Menu",
+    timestamp: "2023-10-15T10:30:00",
+    type: "challenge"
+  },
+  {
+    id: "2",
+    action: "Chat Interaction",
+    details: "Asked about React hooks",
+    timestamp: "2023-10-20T15:45:00",
+    type: "chat"
+  },
+  {
+    id: "3",
+    action: "Profile Update",
+    details: "Updated username",
+    timestamp: "2023-10-25T09:15:00",
+    type: "profile"
+  }
+];
+
 const ProfilePage = () => {
   const { user, profile, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>(mockCompletedTasks);
+  const [activityHistory, setActivityHistory] = useState<ActivityHistory[]>(mockActivityHistory);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({
+    username: profile?.username || '',
+    avatar_url: profile?.avatar_url || ''
+  });
   
   useEffect(() => {
     if (!isLoading && !user) {
       navigate('/login');
     }
   }, [user, isLoading, navigate]);
+
+  const handleEditProfile = () => {
+    setIsEditing(true);
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      // In a real app, this would update the profile in the database
+      // For now, we'll just update the local state
+      setEditedProfile(prev => ({
+        ...prev,
+        username: editedProfile.username.trim()
+      }));
+
+      // Add to activity history
+      setActivityHistory(prev => [{
+        id: Math.random().toString(),
+        action: "Profile Update",
+        details: "Updated profile information",
+        timestamp: new Date().toISOString(),
+        type: "profile"
+      }, ...prev]);
+
+      setIsEditing(false);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedProfile({
+      username: profile?.username || '',
+      avatar_url: profile?.avatar_url || ''
+    });
+    setIsEditing(false);
+  };
 
   if (isLoading) {
     return (
@@ -112,9 +198,18 @@ const ProfilePage = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Username</span>
+                    <Label htmlFor="username">Username</Label>
                   </div>
-                  <p className="font-medium">{profile.username || 'Not set'}</p>
+                  {isEditing ? (
+                    <Input
+                      id="username"
+                      value={editedProfile.username}
+                      onChange={(e) => setEditedProfile(prev => ({ ...prev, username: e.target.value }))}
+                      placeholder="Enter your username"
+                    />
+                  ) : (
+                    <p className="font-medium">{profile.username || 'Not set'}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -157,9 +252,23 @@ const ProfilePage = () => {
                 </Alert>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">
-                  Edit Profile
-                </Button>
+                {isEditing ? (
+                  <div className="flex gap-2 w-full">
+                    <Button onClick={handleSaveProfile} className="flex-1">
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                    <Button variant="outline" onClick={handleCancelEdit} className="flex-1">
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" onClick={handleEditProfile} className="w-full">
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                )}
               </CardFooter>
             </Card>
             
@@ -212,13 +321,39 @@ const ProfilePage = () => {
                     )}
                   </TabsContent>
                   
-                  <TabsContent value="history">
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground">Activity tracking coming soon!</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        We're working on a comprehensive activity history feature.
-                      </p>
-                    </div>
+                  <TabsContent value="history" className="space-y-4">
+                    {activityHistory.length > 0 ? (
+                      activityHistory.map((activity) => (
+                        <div 
+                          key={activity.id}
+                          className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent transition-colors"
+                        >
+                          <div className={`h-5 w-5 rounded-full flex items-center justify-center mt-0.5 ${
+                            activity.type === 'challenge' ? 'bg-green-100 text-green-600' :
+                            activity.type === 'chat' ? 'bg-blue-100 text-blue-600' :
+                            activity.type === 'profile' ? 'bg-purple-100 text-purple-600' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {activity.type === 'challenge' ? <CheckCircle2 className="h-3 w-3" /> :
+                             activity.type === 'chat' ? <User className="h-3 w-3" /> :
+                             activity.type === 'profile' ? <Edit2 className="h-3 w-3" /> :
+                             <Clock className="h-3 w-3" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">{activity.action}</p>
+                            <p className="text-sm text-muted-foreground">{activity.details}</p>
+                            <div className="flex items-center text-xs text-muted-foreground mt-1">
+                              <Clock className="h-3 w-3 mr-1" />
+                              <span>{new Date(activity.timestamp).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">No activity history yet.</p>
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>
