@@ -21,6 +21,12 @@ function isTechRelated(query: string): boolean {
 
 export async function generateAIResponse(prompt: string): Promise<string> {
   try {
+    // Validate API key
+    if (!GEMINI_API_KEY) {
+      console.error("Gemini API key is not configured");
+      return "I apologize, but the AI service is not properly configured at the moment. Please try again later.";
+    }
+
     if (!isTechRelated(prompt)) {
       return "I apologize, but I'm specifically designed to assist with technology-related queries only. Please ask questions about programming, software development, hardware, or other technical topics. For non-technical questions, I recommend consulting appropriate resources or experts in those fields.";
     }
@@ -66,7 +72,14 @@ export async function generateAIResponse(prompt: string): Promise<string> {
     if (!response.ok) {
       const errorData = await response.json();
       console.error("AI response error:", errorData);
-      throw new Error(`API error: ${response.status}`);
+      
+      if (response.status === 401) {
+        return "I apologize, but there's an issue with the AI service authentication. Please try again later.";
+      } else if (response.status === 429) {
+        return "I'm currently experiencing high demand. Please wait a moment and try again.";
+      } else {
+        return "I'm having trouble processing your request right now. Please try again later.";
+      }
     }
 
     const data = await response.json();
@@ -74,7 +87,8 @@ export async function generateAIResponse(prompt: string): Promise<string> {
     if (data.candidates && data.candidates[0] && data.candidates[0].content) {
       return data.candidates[0].content.parts[0].text;
     } else {
-      throw new Error("Invalid response format");
+      console.error("Invalid response format:", data);
+      return "I received an unexpected response format. Please try again.";
     }
   } catch (error) {
     console.error("Error generating AI response:", error);

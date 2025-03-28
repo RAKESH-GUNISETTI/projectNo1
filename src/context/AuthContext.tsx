@@ -1,8 +1,8 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
 
 type Profile = {
   id: string;
@@ -21,6 +21,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, username?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  resendConfirmationEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -137,13 +138,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
+        // Check if the error is due to unconfirmed email
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email not confirmed",
+            description: "Please check your email for the confirmation link. You can request a new one if needed.",
+            action: (
+              <Button
+                variant="outline"
+                onClick={() => resendConfirmationEmail(email)}
+              >
+                Resend Confirmation
+              </Button>
+            ),
+          });
+          throw new Error("Please confirm your email before signing in");
+        }
         throw error;
       }
 
-      toast({
-        title: "Welcome back!",
-        description: "You've successfully signed in.",
-      });
+      if (data?.user) {
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully signed in.",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error signing in",
@@ -185,10 +204,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
 
-      toast({
-        title: "Account created!",
-        description: "You've successfully signed up. Please check your email for verification.",
-      });
+      if (data?.user) {
+        toast({
+          title: "Account created!",
+          description: "Please check your email for the confirmation link. You can request a new one if needed.",
+          action: (
+            <Button
+              variant="outline"
+              onClick={() => resendConfirmationEmail(email)}
+            >
+              Resend Confirmation
+            </Button>
+          ),
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error signing up",
@@ -198,6 +227,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw error;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const resendConfirmationEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Confirmation email sent",
+        description: "Please check your email for the confirmation link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error sending confirmation email",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -234,6 +287,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signUp,
         signOut,
         refreshProfile,
+        resendConfirmationEmail,
       }}
     >
       {children}
