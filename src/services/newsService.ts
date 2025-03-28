@@ -1,3 +1,4 @@
+import { NEWS_API_KEY } from "@/config/api";
 
 // This is a mock service - in a real app, you would connect to an actual API
 export interface NewsItem {
@@ -8,7 +9,17 @@ export interface NewsItem {
   date: string;
   imageUrl: string;
   url: string;
+  content?: string;
 }
+
+const TECH_KEYWORDS = [
+  'technology', 'software', 'hardware', 'programming', 'coding', 'computer',
+  'internet', 'web', 'mobile', 'app', 'database', 'cloud', 'security',
+  'network', 'algorithm', 'data', 'development', 'engineering', 'system',
+  'platform', 'framework', 'language', 'api', 'server', 'client', 'frontend',
+  'backend', 'devops', 'ai', 'machine learning', 'artificial intelligence',
+  'blockchain', 'cryptography', 'cybersecurity'
+];
 
 // Mock data for demonstration
 const mockNewsData: NewsItem[] = [
@@ -70,9 +81,86 @@ const mockNewsData: NewsItem[] = [
 
 // Simulate API fetch with random shuffling to get "fresh" news on reload
 export const fetchLatestNews = async (): Promise<NewsItem[]> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return shuffled news items to simulate "fresh" content
-  return [...mockNewsData].sort(() => Math.random() - 0.5);
+  try {
+    if (!NEWS_API_KEY) {
+      throw new Error('NewsAPI key is not configured');
+    }
+
+    // Clear any existing cached news
+    sessionStorage.removeItem('cachedTechNews');
+
+    const response = await fetch(
+      `https://newsapi.org/v2/top-headlines?country=us&category=technology&apiKey=${NEWS_API_KEY}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch news');
+    }
+
+    const data = await response.json();
+    
+    if (!data.articles || !Array.isArray(data.articles)) {
+      throw new Error('Invalid news data format');
+    }
+
+    // Filter and transform the news items
+    const techNews = data.articles
+      .filter((article: any) => {
+        const title = article.title?.toLowerCase() || '';
+        const description = article.description?.toLowerCase() || '';
+        return TECH_KEYWORDS.some(keyword => 
+          title.includes(keyword) || description.includes(keyword)
+        );
+      })
+      .map((article: any, index: number) => ({
+        id: `${Date.now()}-${index}`,
+        title: article.title || 'No Title',
+        summary: article.description || 'No description available',
+        source: article.source?.name || 'Unknown Source',
+        date: article.publishedAt || new Date().toISOString(),
+        imageUrl: article.urlToImage || 'https://images.unsplash.com/photo-1516110833967-0b5716ca1387?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+        url: article.url || '#',
+        content: article.content
+      }));
+
+    // Cache the new news
+    sessionStorage.setItem('cachedTechNews', JSON.stringify({
+      timestamp: Date.now(),
+      news: techNews
+    }));
+
+    return techNews;
+  } catch (error) {
+    console.error('Error fetching news:', error);
+    
+    // Try to load from cache if fetch fails
+    const cachedData = sessionStorage.getItem('cachedTechNews');
+    if (cachedData) {
+      const { timestamp, news } = JSON.parse(cachedData);
+      // Only use cache if it's less than 1 hour old
+      if (Date.now() - timestamp < 3600000) {
+        return news;
+      }
+    }
+    
+    // Return empty array if both fetch and cache fail
+    return [];
+  }
+};
+
+export const fetchArticleDetails = async (articleId: string): Promise<NewsItem | null> => {
+  try {
+    const cachedData = sessionStorage.getItem('cachedTechNews');
+    if (cachedData) {
+      const { news } = JSON.parse(cachedData);
+      const article = news.find((item: NewsItem) => item.id === articleId);
+      if (article) {
+        return article;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching article details:', error);
+    return null;
+  }
 };

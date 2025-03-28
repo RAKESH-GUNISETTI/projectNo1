@@ -1,4 +1,3 @@
-
 import { GEMINI_API_KEY, GEMINI_MODEL } from "@/config/api";
 
 export interface ChatMessage {
@@ -6,8 +5,26 @@ export interface ChatMessage {
   content: string;
 }
 
+// Tech-related keywords and topics
+const techKeywords = [
+  'programming language', 'code', 'software', 'hardware', 'computer', 'technology', 'digital','developer','founder',
+  'internet', 'web', 'mobile', 'app', 'database', 'cloud', 'security', 'network',
+  'algorithm', 'data', 'development', 'engineering', 'system', 'platform', 'framework',
+  'language', 'api', 'server', 'client', 'frontend', 'backend', 'devops', 'ai',
+  'machine learning', 'artificial intelligence', 'blockchain', 'cryptography', 'cybersecurity'
+];
+
+function isTechRelated(query: string): boolean {
+  const lowercaseQuery = query.toLowerCase();
+  return techKeywords.some(keyword => lowercaseQuery.includes(keyword));
+}
+
 export async function generateAIResponse(prompt: string): Promise<string> {
   try {
+    if (!isTechRelated(prompt)) {
+      return "I apologize, but I'm specifically designed to assist with technology-related queries only. Please ask questions about programming, software development, hardware, or other technical topics. For non-technical questions, I recommend consulting appropriate resources or experts in those fields.";
+    }
+
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {

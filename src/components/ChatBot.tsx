@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -209,6 +208,9 @@ export function ChatBot() {
                         {query}
                       </button>
                     ))}
+                  </div>
+                  <div className="text-xs text-muted-foreground italic border-t pt-2 mt-2">
+                    ⚠️ This AI assistant is specifically designed to handle technology-related queries only. For non-technical questions, please consult appropriate resources or experts in those fields.
                   </div>
                 </div>
               </CardContent>

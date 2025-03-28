@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -202,6 +201,9 @@ const ChatPage = () => {
               </form>
             </CardFooter>
           </Card>
+          <div className="text-xs text-muted-foreground italic border-t pt-2 mt-4 text-center">
+            ⚠️ This AI assistant is specifically designed to handle technology-related queries only.So we are kindly requesting you to deal only with tech-related Concepts. For any other non-technical questions, please consult appropriate resources or experts in those fields.
+          </div>
         </div>
       </div>
     </MainLayout>

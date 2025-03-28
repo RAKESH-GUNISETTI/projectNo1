@@ -1,4 +1,3 @@
-
 import { MessageSquare, Newspaper, Trophy, Code } from "lucide-react";
 
 export function Features() {
@@ -48,10 +47,10 @@ export function Features() {
           {features.map((feature, index) => (
             <div 
               key={index} 
-              className="glass-card p-6 rounded-xl transition-all duration-900 hover:translate-y-[-12px] hover:shadow-xl hover:shadow-primary/20 scroll-animate"
-              style={{ animationDelay: `${index * 300 + 400}ms` }}
+              className="glass-card p-6 rounded-xl transition-all duration-700 hover:translate-y-[-12px] hover:shadow-xl hover:shadow-primary/20 scroll-animate"
+              style={{ animationDelay: `${index * 150 + 200}ms` }}
               data-animation="zoom-in"
-              data-delay={`${index * 200 + 400}`}
+              data-delay={`${index * 100 + 200}`}
             >
               <div className="flex flex-col items-center text-center">
                 <div className="p-3 rounded-full bg-primary/10 mb-4 transition-all duration-700 hover:scale-110 hover:bg-primary/20 hover:rotate-6 hover:shadow-lg">

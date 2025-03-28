@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { fetchLatestNews, NewsItem } from '@/services/newsService';
-import { Clock, ArrowRight, ExternalLink, ArrowLeft } from 'lucide-react';
+import { fetchLatestNews, fetchArticleDetails, NewsItem } from '@/services/newsService';
+import { Clock, ArrowRight, ExternalLink, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { 
   Dialog, 
@@ -15,45 +14,67 @@ import {
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 export function NewsSection() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const getNews = async () => {
+    try {
+      setLoading(true);
+      const newsData = await fetchLatestNews();
+      if (newsData && newsData.length > 0) {
+        // Force a complete refresh by clearing and setting news in a single state update
+        setNews(newsData);
+        toast.success('News updated successfully!');
+      } else {
+        toast.error('No new articles found. Please try again later.');
+      }
+    } catch (error) {
+      console.error('Error fetching news:', error);
+      toast.error('Failed to fetch latest news. Please try again later.');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const getNews = async () => {
-      try {
-        const newsData = await fetchLatestNews();
-        setNews(newsData);
-        
-        // Store news in sessionStorage for persistence
-        sessionStorage.setItem('cachedNews', JSON.stringify(newsData));
-      } catch (error) {
-        console.error('Error fetching news:', error);
-        
-        // Try to load from sessionStorage if fetch fails
-        const cachedNews = sessionStorage.getItem('cachedNews');
-        if (cachedNews) {
-          setNews(JSON.parse(cachedNews));
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Check if we have cached news first
-    const cachedNews = sessionStorage.getItem('cachedNews');
-    if (cachedNews) {
-      setNews(JSON.parse(cachedNews));
-      setLoading(false);
-      // Still fetch fresh news in the background
-      getNews();
-    } else {
-      getNews();
-    }
+    getNews();
+    // Refresh news every 5 minutes
+    const interval = setInterval(getNews, 300000);
+    return () => clearInterval(interval);
   }, []);
+
+  const handleRefreshNews = async () => {
+    try {
+      setIsRefreshing(true);
+      setLoading(true);
+      // Clear existing news immediately
+      setNews([]);
+      // Clear any cached news
+      sessionStorage.removeItem('cachedTechNews');
+      // Fetch new news
+      const newNews = await fetchLatestNews();
+      if (newNews && newNews.length > 0) {
+        setNews(newNews);
+        toast.success('News updated successfully!');
+      } else {
+        toast.error('No new articles found. Please try again later.');
+      }
+    } catch (error) {
+      console.error('Error refreshing news:', error);
+      toast.error('Failed to refresh news. Please try again.');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   // Function to get a random color for tags
   const getRandomTagColor = () => {
@@ -74,161 +95,230 @@ export function NewsSection() {
   const extendedNews = [...news, ...news.slice(0, 2)];
 
   // Handle opening the article dialog
-  const openArticleDialog = (article: NewsItem) => {
+  const openArticleDialog = async (article: NewsItem) => {
     setSelectedArticle(article);
     setIsDialogOpen(true);
+    setIsLoadingDetails(true);
+
+    try {
+      const details = await fetchArticleDetails(article.id);
+      if (details) {
+        setSelectedArticle(details);
+      }
+    } catch (error) {
+      console.error('Error fetching article details:', error);
+      toast.error('Failed to load article details. Please try again.');
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  // Handle opening full article
+  const handleFullArticle = async (article: NewsItem) => {
+    setSelectedArticle(article);
+    setIsDialogOpen(true);
+    setIsLoadingDetails(true);
+
+    try {
+      const details = await fetchArticleDetails(article.id);
+      if (details) {
+        setSelectedArticle(details);
+      }
+    } catch (error) {
+      console.error('Error fetching article details:', error);
+      toast.error('Failed to load article details. Please try again.');
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
   return (
     <section id="news" className="section-spacing">
       <div className="page-container">
-        <div className="text-center max-w-2xl mx-auto mb-12 scroll-animate" data-animation="slide-up" data-delay="200">
-          <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            Latest News
+        <div className="flex justify-between items-center mb-12">
+          <div className="text-center max-w-2xl scroll-animate" data-animation="slide-up" data-delay="200">
+            <div className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+              Latest News
+            </div>
+            <h2 className="text-3xl font-bold sm:text-4xl mb-4">Stay updated with tech trends</h2>
+            <p className="text-muted-foreground">
+              Get the latest technology news and stay informed about emerging trends, product launches, and industry insights.
+            </p>
           </div>
-          <h2 className="text-3xl font-bold sm:text-4xl mb-4">Stay updated with tech trends</h2>
-          <p className="text-muted-foreground">
-            Get the latest technology news and stay informed about emerging trends, product launches, and industry insights.
-          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefreshNews}
+            disabled={isRefreshing || loading}
+            className="transition-all hover:bg-primary/10"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh News'}
+          </Button>
         </div>
 
-        {/* Featured news item */}
-        {!loading && news.length > 0 && (
-          <div className="mb-10 scroll-animate" data-animation="fade-in" data-delay="300">
-            <Card className="overflow-hidden hover:shadow-xl transition-all duration-500">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="h-64 md:h-full bg-secondary">
-                  <img 
-                    src={news[0].imageUrl} 
-                    alt={news[0].title} 
-                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
-                  />
-                </div>
-                <div className="p-6 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge className={getRandomTagColor()}>
-                        {news[0].source}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {format(new Date(news[0].date), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                    <CardTitle className="text-2xl mb-3 transition-colors hover:text-primary">{news[0].title}</CardTitle>
-                    <CardDescription className="text-base">{news[0].summary}</CardDescription>
-                  </div>
-                  <CardFooter className="px-0 pt-4 flex gap-3">
-                    <Button variant="outline" className="group" onClick={() => openArticleDialog(news[0])}>
-                      View Details
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Button>
-                    <Button variant="secondary" className="group" asChild>
-                      <Link to={`/news/${news[0].id}`}>
-                        Read Full Article
-                        <ExternalLink className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </div>
-              </div>
-            </Card>
+        {/* Show loading state */}
+        {(loading || isRefreshing) && (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
 
-        {/* News Grid - First Row */}
-        <div className="grid md:grid-cols-3 gap-6 mb-10">
-          {!loading && news.slice(1, 4).map((item, index) => (
-            <Card 
-              key={`row1-${item.id}-${index}`} 
-              className="overflow-hidden hover:shadow-lg transition-all duration-500 scroll-animate" 
-              data-animation="zoom-in" 
-              data-delay={`${(index + 1) * 150 + 300}`}
-            >
-              <div className="h-48 bg-secondary">
-                <img 
-                  src={item.imageUrl} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
-                />
-              </div>
-              <CardHeader className="p-4 pb-2">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className={getRandomTagColor()}>
-                    {item.source}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground flex items-center">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {format(new Date(item.date), 'MMM d, yyyy')}
-                  </span>
+        {/* Only show news content when not loading and we have news */}
+        {!loading && !isRefreshing && news.length > 0 && (
+          <>
+            {/* Featured news item */}
+            <div className="mb-10 scroll-animate" data-animation="fade-in" data-delay="300">
+              <Card className="overflow-hidden hover:shadow-xl transition-all duration-500">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="h-64 md:h-full bg-secondary">
+                    <img 
+                      src={news[0].imageUrl} 
+                      alt={news[0].title} 
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
+                    />
+                  </div>
+                  <div className="p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge className={getRandomTagColor()}>
+                          {news[0].source}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {format(new Date(news[0].date), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                      <CardTitle className="text-2xl mb-3 transition-colors hover:text-primary">{news[0].title}</CardTitle>
+                      <CardDescription className="text-base">{news[0].summary}</CardDescription>
+                    </div>
+                    <CardFooter className="px-0 pt-4 flex gap-3">
+                      <Button variant="outline" className="group" onClick={() => openArticleDialog(news[0])}>
+                        View Details
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        className="group" 
+                        onClick={() => handleFullArticle(news[0])}
+                      >
+                        Read Full Article
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </Button>
+                    </CardFooter>
+                  </div>
                 </div>
-                <CardTitle className="text-lg transition-colors hover:text-primary">{item.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <CardDescription className="line-clamp-2">{item.summary}</CardDescription>
-              </CardContent>
-              <CardFooter className="p-4 pt-0 flex justify-between">
-                <Button variant="ghost" size="sm" className="group p-0" onClick={() => openArticleDialog(item)}>
-                  View Details
-                  <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
-                </Button>
-                <Button variant="outline" size="sm" className="group" asChild>
-                  <Link to={`/news/${item.id}`}>
-                    Full Article
-                    <ExternalLink className="ml-1 h-3 w-3" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            </div>
 
-        {/* News Grid - Second Row (Extended) */}
-        <div className="grid md:grid-cols-4 gap-6 mb-10">
-          {!loading && extendedNews.slice(4, 8).map((item, index) => (
-            <Card 
-              key={`row2-${item.id}-${index}`} 
-              className="overflow-hidden hover:shadow-lg transition-all duration-500 scroll-animate" 
-              data-animation="zoom-in" 
-              data-delay={`${(index + 1) * 150 + 600}`}
-            >
-              <div className="h-40 bg-secondary">
-                <img 
-                  src={item.imageUrl} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
-                />
-              </div>
-              <CardHeader className="p-3 pb-1">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className={getRandomTagColor()}>
-                    {item.source}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground flex items-center">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {format(new Date(item.date), 'MMM d, yyyy')}
-                  </span>
-                </div>
-                <CardTitle className="text-base transition-colors hover:text-primary">{item.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-0">
-                <CardDescription className="text-sm line-clamp-2">{item.summary}</CardDescription>
-              </CardContent>
-              <CardFooter className="p-3 pt-0 flex justify-between">
-                <Button variant="ghost" size="sm" className="group p-0 text-sm" onClick={() => openArticleDialog(item)}>
-                  View Details
-                  <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
-                </Button>
-                <Button variant="outline" size="sm" className="group text-xs" asChild>
-                  <Link to={`/news/${item.id}`}>
-                    Full Article
-                    <ExternalLink className="ml-1 h-3 w-3" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+            {/* News Grid - First Row */}
+            <div className="grid md:grid-cols-3 gap-6 mb-10">
+              {!loading && news.slice(1, 4).map((item, index) => (
+                <Card 
+                  key={`row1-${item.id}-${index}`} 
+                  className="overflow-hidden hover:shadow-lg transition-all duration-500 scroll-animate" 
+                  data-animation="zoom-in" 
+                  data-delay={`${(index + 1) * 150 + 300}`}
+                >
+                  <div className="h-48 bg-secondary">
+                    <img 
+                      src={item.imageUrl} 
+                      alt={item.title} 
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
+                    />
+                  </div>
+                  <CardHeader className="p-4 pb-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge className={getRandomTagColor()}>
+                        {item.source}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {format(new Date(item.date), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                    <CardTitle className="text-lg transition-colors hover:text-primary">{item.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <CardDescription className="line-clamp-2">{item.summary}</CardDescription>
+                  </CardContent>
+                  <CardFooter className="p-4 pt-0 flex justify-between">
+                    <Button variant="ghost" size="sm" className="group p-0" onClick={() => openArticleDialog(item)}>
+                      View Details
+                      <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="group" 
+                      onClick={() => handleFullArticle(item)}
+                    >
+                      Full Article
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+
+            {/* News Grid - Second Row (Extended) */}
+            <div className="grid md:grid-cols-4 gap-6 mb-10">
+              {!loading && extendedNews.slice(4, 8).map((item, index) => (
+                <Card 
+                  key={`row2-${item.id}-${index}`} 
+                  className="overflow-hidden hover:shadow-lg transition-all duration-500 scroll-animate" 
+                  data-animation="zoom-in" 
+                  data-delay={`${(index + 1) * 150 + 600}`}
+                >
+                  <div className="h-40 bg-secondary">
+                    <img 
+                      src={item.imageUrl} 
+                      alt={item.title} 
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105" 
+                    />
+                  </div>
+                  <CardHeader className="p-3 pb-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge className={getRandomTagColor()}>
+                        {item.source}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {format(new Date(item.date), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                    <CardTitle className="text-base transition-colors hover:text-primary">{item.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0">
+                    <CardDescription className="text-sm line-clamp-2">{item.summary}</CardDescription>
+                  </CardContent>
+                  <CardFooter className="p-3 pt-0 flex justify-between">
+                    <Button variant="ghost" size="sm" className="group p-0 text-sm" onClick={() => openArticleDialog(item)}>
+                      View Details
+                      <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="group text-xs" 
+                      onClick={() => handleFullArticle(item)}
+                    >
+                      Full Article
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Show message when no news is available */}
+        {!loading && !isRefreshing && news.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No news articles available. Please try refreshing.</p>
+          </div>
+        )}
 
         <div className="text-center scroll-animate" data-animation="fade-in" data-delay="900">
           <Button asChild size="lg">
@@ -239,84 +329,73 @@ export function NewsSection() {
 
       {/* Enhanced Article Detail Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedArticle && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className={getRandomTagColor()}>
-                      {selectedArticle.source}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {format(new Date(selectedArticle.date), 'MMMM d, yyyy')}
-                    </span>
+        <DialogContent className="fixed inset-0 flex items-center justify-center w-full h-full bg-black/50 backdrop-blur-sm z-50">
+          <div className="relative w-[95%] max-w-5xl max-h-[90vh] overflow-y-auto bg-background rounded-lg shadow-2xl">
+            {selectedArticle && (
+              <>
+                <DialogHeader className="sticky top-0 bg-background z-10 border-b pb-4 px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge className={getRandomTagColor()}>
+                        {selectedArticle.source}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {format(new Date(selectedArticle.date), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setIsDialogOpen(false)}
+                      className="rounded-full hover:bg-destructive/10"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="rounded-full p-2 h-8 w-8" 
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span className="sr-only">Back to news list</span>
-                  </Button>
-                </div>
-                <DialogTitle className="text-2xl mb-3">{selectedArticle.title}</DialogTitle>
-                <DialogDescription>
-                  <div className="my-4 relative h-60 sm:h-80 bg-secondary rounded-md overflow-hidden">
+                  <DialogTitle className="text-3xl font-bold">{selectedArticle.title}</DialogTitle>
+                  <DialogDescription className="text-lg text-muted-foreground">
+                    {selectedArticle.summary}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="mt-6 px-6">
+                  <div className="relative h-[400px] w-full rounded-lg overflow-hidden mb-6">
                     <img 
                       src={selectedArticle.imageUrl} 
-                      alt={selectedArticle.title} 
+                      alt={selectedArticle.title}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="prose dark:prose-invert prose-sm sm:prose-base max-w-none">
-                    <p className="text-base leading-relaxed">{selectedArticle.summary}</p>
-                    <p className="mt-4 text-base leading-relaxed">
-                      This is an expanded view of the article. In a fully implemented version, this would show the complete article content with formatting, additional images, and related links. For now, we're showing a preview of what the complete article might contain.
-                    </p>
-                    <p className="mt-4 text-base leading-relaxed">
-                      The article discusses various aspects of {selectedArticle.title.toLowerCase()}, including recent developments in the field, expert opinions, and potential future implications.
-                    </p>
-                    <blockquote className="border-l-4 border-primary pl-4 italic my-6">
-                      "An insightful quote about {selectedArticle.title.split(' ').slice(0, 3).join(' ').toLowerCase()} from an industry expert would appear here, adding credibility and perspective to the article."
-                    </blockquote>
-                    <h3 className="text-xl font-semibold mt-6 mb-3">Key Takeaways</h3>
-                    <ul className="list-disc pl-5 space-y-2">
-                      <li>First important point about {selectedArticle.title.split(' ').slice(0, 2).join(' ').toLowerCase()}</li>
-                      <li>Second critical insight related to the topic</li>
-                      <li>Third consideration for readers to understand</li>
-                    </ul>
-                    <h3 className="text-xl font-semibold mt-6 mb-3">Related Topics</h3>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {['Technology', 'Innovation', 'Development', 'Future Trends'].map((tag) => (
-                        <Badge key={tag} variant="outline" className="cursor-pointer hover:bg-primary/10">
-                          {tag}
-                        </Badge>
-                      ))}
+                  {isLoadingDetails ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
-                  </div>
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between items-center mt-6 border-t pt-4">
-                <div className="text-sm text-muted-foreground">
-                  Article ID: {selectedArticle.id} • Source: {selectedArticle.source}
+                  ) : (
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
+                      <div className="text-lg leading-relaxed">
+                        {selectedArticle.content || selectedArticle.summary}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Back to News
-                  </Button>
-                  <Button variant="default" asChild>
-                    <Link to={`/news/${selectedArticle.id}`}>
+
+                <DialogFooter className="sticky bottom-0 bg-background z-10 border-t pt-4 px-6">
+                  <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
+                    <a 
+                      href={selectedArticle.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="group"
+                    >
                       Read Full Article
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </Link>
+                      <ExternalLink className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </a>
                   </Button>
-                </div>
-              </DialogFooter>
-            </>
-          )}
+                </DialogFooter>
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </section>
