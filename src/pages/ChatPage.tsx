@@ -7,14 +7,6 @@ import { MainLayout } from '@/layouts/MainLayout';
 import { generateAIResponse, ChatMessage } from '@/services/aiChatService';
 import { toast } from "sonner";
 
-interface ActivityHistory {
-  id: string;
-  action: string;
-  details: string;
-  timestamp: string;
-  type: 'challenge' | 'chat' | 'profile' | 'system';
-}
-
 const ChatPage = () => {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -25,9 +17,6 @@ const ChatPage = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({ username: '' });
-  const [activityHistory, setActivityHistory] = useState<ActivityHistory[]>([]);
 
   // Load persisted chat data from sessionStorage
   useEffect(() => {
@@ -106,41 +95,6 @@ const ChatPage = () => {
       sessionStorage.removeItem('fullChatMessages');
       sessionStorage.removeItem('fullChatQuery');
       toast.success("Chat history cleared!");
-    }
-  };
-
-  const handleEditProfile = () => {
-    setIsEditing(true);
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      // Update profile
-      setEditedProfile(prev => ({
-        ...prev,
-        username: editedProfile.username.trim()
-      }));
-
-      // Add to activity history
-      setActivityHistory(prev => [{
-        id: Math.random().toString(),
-        action: "Profile Update",
-        details: "Updated profile information",
-        timestamp: new Date().toISOString(),
-        type: "profile"
-      }, ...prev]);
-
-      setIsEditing(false);
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -248,7 +202,7 @@ const ChatPage = () => {
             </CardFooter>
           </Card>
           <div className="text-xs text-muted-foreground italic border-t pt-2 mt-4 text-center">
-            ⚠️ This AI assistant is specifically designed to handle technology-related queries only.So we are kindly requesting you to deal only with tech-related Concepts. For any other non-technical questions, please consult appropriate resources or experts in those fields.
+            ⚠️ This AI assistant is specifically designed to handle technology-related queries only. So we are kindly requesting you to deal only with tech-related Concepts. For any other non-technical questions, please consult appropriate resources or experts in those fields.
           </div>
         </div>
       </div>

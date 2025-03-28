@@ -13,6 +13,7 @@ interface User {
   id: string;
   email: string;
   username?: string;
+  created_at: string;
 }
 
 interface AuthContextType {
@@ -22,11 +23,13 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'bytebolt_user';
+const PROFILE_STORAGE_KEY = 'bytebolt_profile';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -35,27 +38,78 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for existing user in localStorage
+    // Check for existing user and profile in localStorage
     const storedUser = localStorage.getItem(STORAGE_KEY);
+    const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+    
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        // Create a simple profile from user data
-        setProfile({
-          id: parsedUser.id,
-          username: parsedUser.username || parsedUser.email.split('@')[0],
-          avatar_url: null,
-          credits: 0,
-          is_premium: false
-        });
+        
+        if (storedProfile) {
+          const parsedProfile = JSON.parse(storedProfile);
+          setProfile(parsedProfile);
+        } else {
+          // Create a default profile if none exists
+          const defaultProfile: Profile = {
+            id: parsedUser.id,
+            username: parsedUser.username || parsedUser.email.split('@')[0],
+            avatar_url: null,
+            credits: 0,
+            is_premium: false
+          };
+          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(defaultProfile));
+          setProfile(defaultProfile);
+        }
       } catch (error) {
-        console.error('Error parsing stored user:', error);
+        console.error('Error parsing stored data:', error);
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(PROFILE_STORAGE_KEY);
       }
     }
     setIsLoading(false);
   }, []);
+
+  const updateProfile = async (updates: Partial<Profile>) => {
+    try {
+      if (!profile) {
+        throw new Error('No profile found');
+      }
+
+      const updatedProfile = {
+        ...profile,
+        ...updates
+      };
+
+      // Update localStorage
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updatedProfile));
+      setProfile(updatedProfile);
+
+      // Update user if username was changed
+      if (updates.username && user) {
+        const updatedUser = {
+          ...user,
+          username: updates.username
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      }
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated.",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -77,21 +131,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userData: User = {
         id: Math.random().toString(36).substr(2, 9),
         email,
-        username: email.split('@')[0]
+        username: email.split('@')[0],
+        created_at: new Date().toISOString()
       };
 
       // Store user in localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       setUser(userData);
       
-      // Create a simple profile
-      setProfile({
-        id: userData.id,
-        username: userData.username,
-        avatar_url: null,
-        credits: 0,
-        is_premium: false
-      });
+      // Create or load profile
+      const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (storedProfile) {
+        setProfile(JSON.parse(storedProfile));
+      } else {
+        const defaultProfile: Profile = {
+          id: userData.id,
+          username: userData.username,
+          avatar_url: null,
+          credits: 0,
+          is_premium: false
+        };
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(defaultProfile));
+        setProfile(defaultProfile);
+      }
 
       toast({
         title: "Welcome back!",
@@ -134,21 +196,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userData: User = {
         id: Math.random().toString(36).substr(2, 9),
         email,
-        username: username || email.split('@')[0]
+        username: username || email.split('@')[0],
+        created_at: new Date().toISOString()
       };
 
       // Store user in localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       setUser(userData);
       
-      // Create a simple profile
-      setProfile({
+      // Create a default profile
+      const defaultProfile: Profile = {
         id: userData.id,
         username: userData.username,
         avatar_url: null,
         credits: 0,
         is_premium: false
-      });
+      };
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(defaultProfile));
+      setProfile(defaultProfile);
 
       toast({
         title: "Account created!",
@@ -169,8 +234,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       setIsLoading(true);
-      // Remove user from localStorage
+      // Remove user and profile from localStorage
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PROFILE_STORAGE_KEY);
       setUser(null);
       setProfile(null);
       
@@ -198,6 +264,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         signIn,
         signUp,
         signOut,
+        updateProfile,
       }}
     >
       {children}

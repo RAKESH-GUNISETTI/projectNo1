@@ -77,7 +77,7 @@ const mockActivityHistory: ActivityHistory[] = [
 ];
 
 const ProfilePage = () => {
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isLoading, updateProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [completedTasks, setCompletedTasks] = useState<CompletedTask[]>(mockCompletedTasks);
@@ -100,12 +100,10 @@ const ProfilePage = () => {
 
   const handleSaveProfile = async () => {
     try {
-      // In a real app, this would update the profile in the database
-      // For now, we'll just update the local state
-      setEditedProfile(prev => ({
-        ...prev,
+      // Update profile using the AuthContext
+      await updateProfile({
         username: editedProfile.username.trim()
-      }));
+      });
 
       // Add to activity history
       setActivityHistory(prev => [{
@@ -117,16 +115,8 @@ const ProfilePage = () => {
       }, ...prev]);
 
       setIsEditing(false);
-      toast({
-        title: "Profile Updated",
-        description: "Your profile has been successfully updated.",
-      });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error updating profile:', error);
     }
   };
 
